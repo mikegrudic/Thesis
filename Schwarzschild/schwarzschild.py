@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import mpmath
 import scipy
 from scipy import special, integrate, misc, optimize, interpolate
 import time
@@ -16,12 +17,15 @@ def roots(e, b):
 def deflection(e, b):
     r1, r2, r3 = roots(e,b)
     m = r3*(r2-r1)/(r2*(r3-r1))
-
     p2 = lambda t: 1/math.sqrt((1-t*t)*(1-m*t*t))
-    t=time.time()
+#    t=time.time()
     ellipf2 = integrate.quad(p2, 0, math.sqrt(r2/r3))[0]
-
+#    sinphi = math.sqrt(r2/r3)
+#    ellipf = sinphi*mpmath.elliprf(1-sinphi**2, 1-m*sinphi**2, 1)
     return 4*b*ellipf2/math.sqrt(r2*(r3-r1)) - np.pi
+
+def newton_deflection(e, b):
+    return pi - 2*math.acos(1/math.sqrt((e**2 - 1)**2 * b**2 + 1))
 
 def SolveForAngle(e, theta):
     f = lambda b: deflection(e,b) - theta
@@ -29,11 +33,12 @@ def SolveForAngle(e, theta):
 
 grid = np.linspace(0, pi, 1000)
     
-E = 1.1
+E = 1000
 
 b = bmin(E) + 1/np.logspace(-5,10,10000)
 
 deflections = np.array([deflection(E, B) for B in b])
+
 deflections_modpi = deflections % pi
 ddef_db = np.gradient(deflections)/np.gradient(b)
 sigma = np.abs(b/np.sin(deflections)) * np.abs(1/ddef_db)
@@ -51,6 +56,6 @@ summed_sigma = np.cumsum(branch_sigma, axis=0)
 total_sigma = 2*pi*integrate.simps(summed_sigma*np.sin(grid), grid)
 sigma_error = np.abs(total_sigma - total_sigma[-1])
 
-#np.savetxt("deflections.dat", np.array((b, deflections)).T)
-np.savetxt("sigma.dat", np.vstack((grid, summed_sigma)).T)
+np.savetxt("diff_sigma.dat", np.vstack((grid, summed_sigma)).T)
+np.savetxt("sigma.dat", (total_sigma[-1],))
 np.savetxt("error.dat", sigma_error.T)
