@@ -77,20 +77,20 @@ code = """
     const double OmegaAx = -sBx/(rAB*rAB*rAB)
         + mB/(rAB*rAB*rAB)*((2.*vBy-1.5*vAy)*(xAz-xBz)-(2.*vBz-1.5*vAz)*(xAy-xBy))
         + 3./(rAB*rAB*rAB*rAB)*(nABsB + (mB/mA)*nABsA)*(xAx-xBx);
-    const double OmegaAy = -sBy/rAB*rAB*rAB
+    const double OmegaAy = -sBy/(rAB*rAB*rAB)
         + mB/(rAB*rAB*rAB)*((2.*vBz-1.5*vAz)*(xAx-xBx)-(2.*vBx-1.5*vAx)*(xAz-xBz))
         + 3./(rAB*rAB*rAB*rAB)*(nABsB + (mB/mA)*nABsA)*(xAy-xBy);
-    const double OmegaAz = -sBz/rAB*rAB*rAB
+    const double OmegaAz = -sBz/(rAB*rAB*rAB)
         + mB/(rAB*rAB*rAB)*((2.*vBx-1.5*vAx)*(xAy-xBy)-(2.*vBy-1.5*vAy)*(xAx-xBx))
         + 3./(rAB*rAB*rAB*rAB)*(nABsB + (mB/mA)*nABsA)*(xAz-xBz);
 
-    const double OmegaBx = -sAx/rAB*rAB*rAB
+    const double OmegaBx = -sAx/(rAB*rAB*rAB)
         + mA/(rAB*rAB*rAB)*((2.*vAy-1.5*vBy)*(xBz-xAz)-(2.*vAz-1.5*vBz)*(xBy-xAy))
         - 3./(rAB*rAB*rAB*rAB)*(nABsA + (mA/mB)*nABsB)*(xBx-xAx);
-    const double OmegaBy = -sAy/rAB*rAB*rAB
+    const double OmegaBy = -sAy/(rAB*rAB*rAB)
         + mA/(rAB*rAB*rAB)*((2.*vAz-1.5*vBz)*(xBx-xAx)-(2.*vAx-1.5*vBx)*(xBz-xAz))
         - 3./(rAB*rAB*rAB*rAB)*(nABsA + (mA/mB)*nABsB)*(xBy-xAy);
-    const double OmegaBz = -sAz/rAB*rAB*rAB
+    const double OmegaBz = -sAz/(rAB*rAB*rAB)
         + mA/(rAB*rAB*rAB)*((2.*vAx-1.5*vBx)*(xBy-xAy)-(2.*vAy-1.5*vBy)*(xBx-xAx))
         - 3./(rAB*rAB*rAB*rAB)*(nABsA + (mA/mB)*nABsB)*(xBz-xAz);
 
@@ -122,11 +122,11 @@ code = """
 
     // 1 PN terms
     const double aA1PNx = (5.*mA*mB)/(rAB*rAB*rAB)
-        + 4.*mB*mB/rAB*rAB*rAB
-        + mB/rAB*rAB*(1.5*nABvB*nABvB - vAsq + 4*vAvB - 2.*vBsq);
+        + 4.*mB*mB/(rAB*rAB*rAB)
+        + mB/(rAB*rAB)*(1.5*nABvB*nABvB - vAsq + 4*vAvB - 2.*vBsq);
     const double aB1PNx = (5.*mA*mB)/(rAB*rAB*rAB)
-        + 4.*mA*mA/rAB*rAB*rAB
-        + mA/rAB*rAB*(1.5*nABvA*nABvA - vBsq + 4*vAvB - 2.*vAsq);
+        + 4.*mA*mA/(rAB*rAB*rAB)
+        + mA/(rAB*rAB)*(1.5*nABvA*nABvA - vBsq + 4*vAvB - 2.*vAsq);
     const double aA1PNv = mB/(rAB*rAB)*(4.*nABvA - 3.*nABvB);
     const double aB1PNv = mA/(rAB*rAB)*(3.*nABvA - 4.*nABvB);
 
@@ -134,7 +134,7 @@ code = """
     const double aA2PNx = -(57./4.)*mA*mA*mB/(rAB*rAB*rAB*rAB)
         - (69./2.)*mA*mB*mB/(rAB*rAB*rAB*rAB)
         - 9.*mB*mB*mB/(rAB*rAB*rAB*rAB)
-        + mB/rAB*rAB*(-(15./8.)*nABvB*nABvB*nABvB*nABvB + (3./2.)*nABvB*nABvB*vAsq
+        + mB/(rAB*rAB)*(-(15./8.)*nABvB*nABvB*nABvB*nABvB + (3./2.)*nABvB*nABvB*vAsq
             - 6.*nABvB*nABvB*vAvB - 2.*vAvB*vAvB
             + (9./2.)*nABvB*nABvB*vBsq + 4.*vAvB*vBsq - 2.*vBsq*vBsq)
         + mA*mB/(rAB*rAB*rAB)*((39./2.)*nABvA*nABvA - 39.*nABvA*nABvB
@@ -145,7 +145,7 @@ code = """
     const double aB2PNx = -(57./4.)*mB*mB*mA/(rAB*rAB*rAB*rAB)
         - (69./2.)*mB*mA*mA/(rAB*rAB*rAB*rAB)
         - 9.*mA*mA*mA/(rAB*rAB*rAB*rAB)
-        + mA/rAB*rAB*(-(15./8.)*nABvA*nABvA*nABvA*nABvA + (3./2.)*nABvA*nABvA*vBsq
+        + mA/(rAB*rAB)*(-(15./8.)*nABvA*nABvA*nABvA*nABvA + (3./2.)*nABvA*nABvA*vBsq
             - 6.*nABvA*nABvA*vAvB - 2.*vAvB*vAvB
             + (9./2.)*nABvA*nABvA*vAsq + 4.*vAvB*vAsq - 2.*vAsq*vAsq)
         + mA*mB/(rAB*rAB*rAB)*((39./2.)*nABvB*nABvB - 39.*nABvB*nABvA
@@ -156,12 +156,12 @@ code = """
 
     const double aA2PNv = mB*mB/(rAB*rAB*rAB)*(-2.*nABvA - 2.*nABvB)
         + mA*mB/(rAB*rAB*rAB)*(-(63./4.)*nABvA + (55./4.)*nABvB)
-        + mB/rAB*rAB*(-6.*nABvA*nABvB*nABvB + (9./2.)*nABvB*nABvB*nABvB + nABvB*vAsq
+        + mB/(rAB*rAB)*(-6.*nABvA*nABvB*nABvB + (9./2.)*nABvB*nABvB*nABvB + nABvB*vAsq
             - 4.*nABvA*vAvB + 4.*nABvB*vAvB + 4.*nABvA*vBsq
             - 5.*nABvB*vBsq);
     const double aB2PNv = mA*mA/(rAB*rAB*rAB)*(2.*nABvB + 2.*nABvA)
         + mA*mB/(rAB*rAB*rAB)*((63./4.)*nABvB - (55./4.)*nABvA)
-        + mA/rAB*rAB*(6.*nABvB*nABvA*nABvA - (9./2.)*nABvA*nABvA*nABvA - nABvA*vBsq
+        + mA/(rAB*rAB)*(6.*nABvB*nABvA*nABvA - (9./2.)*nABvA*nABvA*nABvA - nABvA*vBsq
             + 4.*nABvB*vAvB - 4.*nABvA*vAvB - 4.*nABvB*vAsq
             + 5.*nABvA*vAsq);
 
@@ -262,21 +262,30 @@ code = """
             +aBv*(vBz-vAz) + cSBz;
 """
 
-def PostNewtonianAccel(PnVars, t, mA=1, mB=1, mPnOrder=2, mSpinOrbit=1, mRadiationReaction=0):
+def PostNewtonianAccel(PnVars, t, mA=1, mB=1, mPnOrder=2, mSpinOrbit=1, mRadiationReaction=1):
     dtPnVars = np.zeros(18)
     weave.inline(code, ['mA', 'mB', 'PnVars', 'dtPnVars', 'mPnOrder', 'mSpinOrbit', 'mRadiationReaction'])
     return dtPnVars
 
-a = 1000
+a = 30
 
-x = np.array([0,0,0,0,0,0,-a,0,0,a,0,0,0,math.sqrt(0.25/a),0,0,-math.sqrt(0.25/a),0])
-print PostNewtonianAccel(x, 0)
+x = np.array([0,0,0,0,0,0,-a,0,0,a,0,0,0,math.sqrt(0.235/a),0,0,-math.sqrt(0.235/a),0])
+print -0.5/a + 0.45/a
 T = 2*np.pi*math.sqrt(4*a**3)
 
-t= np.linspace(0, T, 1000)
+t= np.linspace(0, 250000,1000000)
 
-xx = integrate.odeint(PostNewtonianAccel,x, t)
-print xx[:5]
+#integrator = integrate.ode(PostNewonianAccel).set_integrator('dopri5',method='adams')
+#integrator.set_initial_value(x,0)
+#t1 = T
+#dt = T/100
+#while integrator.successful() and integrator.t < t1:
+#    integrator.integrate(integrator.t+dt)
+xx = integrate.odeint(PostNewtonianAccel,x, t, rtol=1e-13)
 np.savetxt("traj.dat", xx[:,6:12])
+print xx[0,9:12]
+r = xx[:,6:9] - xx[:,9:12]
+rmag = np.sqrt(np.sum(r**2,axis=1))
+np.savetxt("r.dat",rmag)
 
 #print PostNewtonianAccel(x, 0, mPnOrder=0)
