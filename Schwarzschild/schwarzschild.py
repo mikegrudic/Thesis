@@ -1,6 +1,6 @@
 import numpy as np
 import math
-import mpmath
+import CarlsonR
 import scipy
 from scipy import special, integrate, misc, optimize, interpolate
 import time
@@ -17,12 +17,14 @@ def roots(e, b):
 def deflection(e, b):
     r1, r2, r3 = roots(e,b)
     m = r3*(r2-r1)/(r2*(r3-r1))
-    p2 = lambda t: 1/math.sqrt((1-t*t)*(1-m*t*t))
+#    p2 = lambda t: 1/math.sqrt((1-t*t)*(1-m*t*t))
 #    t=time.time()
-    ellipf2 = integrate.quad(p2, 0, math.sqrt(r2/r3))[0]
-#    sinphi = math.sqrt(r2/r3)
-#    ellipf = sinphi*mpmath.elliprf(1-sinphi**2, 1-m*sinphi**2, 1)
-    return 4*b*ellipf2/math.sqrt(r2*(r3-r1)) - np.pi
+#    ellipf2 = integrate.quad(p2, 0, math.sqrt(r2/r3))[0]
+    sinphiSquared = r2/r3
+    x = float(1 - sinphiSquared)
+    y = float(1 - m*sinphiSquared)
+    ellipf = math.sqrt(sinphiSquared)*CarlsonR.RF(x, y, 1.0)
+    return 4*b*ellipf/math.sqrt(r2*(r3-r1)) - np.pi
 
 def newton_deflection(e, b):
     return pi - 2*math.acos(1/math.sqrt((e**2 - 1)**2 * b**2 + 1))
@@ -31,11 +33,11 @@ def SolveForAngle(e, theta):
     f = lambda b: deflection(e,b) - theta
     return optimize.newton(f, 10*bmin(e))
 
-grid = np.linspace(0, pi, 1000)
+grid = np.linspace(0, pi, 10000)
     
 E = 1000
 
-b = bmin(E) + 1/np.logspace(-5,10,10000)
+b = bmin(E) + 1/np.logspace(-5,10,100000)
 
 deflections = np.array([deflection(E, B) for B in b])
 
