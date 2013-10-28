@@ -83,13 +83,20 @@ def InvSqrtQuartic(r1, r2, r3, r4, a, b=None):
     U12squared = U12**2
     return 2*RF(U12squared, U12squared - (r4 - r1)*(r3 - r2), U12squared - (r3 - r1)*(r4 - r2))
 
-def TerribleIntegral(r1,r2,r3,r4,r5, a, b):
-    U12 = (math.sqrt((b-r1)*(b-r2)*(a-r3)*(a-r4)) + math.sqrt((b-r4)*(b-r3)*(a-r2)*(a-r1)))/(b-a)
-    U12sqr = U12**2
+def TerribleIntegral(r1,r2,r3,r4,r5, a, b=None):
+    if b == None:
+        U12 = math.sqrt((a - r1)*(a - r2)) + math.sqrt((a - r3)*(a - r4))
+        U12sqr = U12*U12
+        Wsqr = U12sqr - (r3 - r1)*(r4 - r1)*(r5 - r2)/(r5 - r1)
+        Qsqr = (a - r5)/(a - r1)*Wsqr
+    else:
+        U12 = (math.sqrt((b-r1)*(b-r2)*(a-r3)*(a-r4)) + math.sqrt((b-r4)*(b-r3)*(a-r2)*(a-r1)))/(b-a)
+        U12sqr = U12*U12
+        Wsqr = U12sqr - (r3 - r1)*(r4 - r1)*(r5 - r2)/(r5 - r1)
+        Qsqr = ((a - r5)*(b - r5)/(a - r1)/(b - r1))*Wsqr
+
     U13sqr = U12sqr - (r4 - r1)*(r3 - r2)
     U14sqr = U12sqr - (r3 - r1)*(r4 - r2)
-    Wsqr = U12sqr - (r3 - r1)*(r4 - r1)*(r5 - r2)/(r5 - r1)
-    Qsqr = ((a - r5)*(b - r5)/(a - r1)/(b - r1))*Wsqr
     Psqr = Qsqr + (r5 - r2)*(r5 - r3)*(r5 - r4)/(r5 - r1)
     I3 = 2*(r2 - r1)*(r3 - r1)*(r4 - r1)/3.0/(r5-r1) * BoostRJ(U12sqr, U13sqr, U14sqr, Wsqr) + 2*BoostRC(Psqr, Qsqr)
     I1 = 2*BoostRF(U12sqr, U13sqr, U14sqr)
