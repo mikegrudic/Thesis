@@ -53,14 +53,23 @@ def RF(x,y,z):
     
     C++ code comes directly from Numerical Recipes 3e by Press et al., section 6.12
     """
-
     return weave.inline(RFcode,['x','y','z'],headers=["<float.h>","<algorithm>"])
 
 def BoostRF(x,y,z):
+    if type(x) != np.ndarray:
+        x = np.array([x])
+    if type(x) != np.ndarray:
+        y = np.array([y])
+    if type(x) != np.ndarray:
+        z = np.array([z])
+    result = np.zeros(x.shape)
     RFcode = """
-    return_val = boost::math::ellint_rf(x, y, z);
+    for (int i = 0; i < Nx[0]; ++i){
+        result[i] = boost::math::ellint_rf(x[i], y[i], z[i]);
+    }
     """
-    return weave.inline(RFcode, ['x','y','z'], headers = ["<boost/math/special_functions/ellint_rf.hpp>"])
+    weave.inline(RFcode, ['x','y','z','result'], headers = ["<boost/math/special_functions/ellint_rf.hpp>"])
+    return result
 
 def BoostRJ(x,y,z,p):
     RJcode = """
