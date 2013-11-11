@@ -85,12 +85,12 @@ def BoostRC(x,y):
 
 def InvSqrtQuartic(r1, r2, r3, r4, a, b=None):
     if b == None:
-        U12 = math.sqrt((a - r1)*(a - r2)) + math.sqrt((a -r3)*(a -r4))
+        U12 = np.sqrt((a - r1)*(a - r2)) + np.sqrt((a -r3)*(a -r4))
     else:
-        U12 = (math.sqrt((b-r1)*(b-r2)*(a-r3)*(a-r4)) + math.sqrt((b-r4)*(b-r3)*(a-r2)*(a-r1)))/(b-a)
+        U12 = (np.sqrt((b-r1)*(b-r2)*(a-r3)*(a-r4)) + np.sqrt((b-r4)*(b-r3)*(a-r2)*(a-r1)))/(b-a)
 
     U12squared = U12**2
-    return 2*RF(U12squared, U12squared - (r4 - r1)*(r3 - r2), U12squared - (r3 - r1)*(r4 - r2))
+    return 2*BoostRF(U12squared, U12squared - (r4 - r1)*(r3 - r2), U12squared - (r3 - r1)*(r4 - r2))
 
 def TerribleIntegral(r1,r2,r3,r4,r5, a, b=None):
     if b == None:
