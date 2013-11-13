@@ -58,9 +58,9 @@ def RF(x,y,z):
 def BoostRF(x,y,z):
     if type(x) != np.ndarray:
         x = np.array([x])
-    if type(x) != np.ndarray:
+    if type(y) != np.ndarray:
         y = np.array([y])
-    if type(x) != np.ndarray:
+    if type(z) != np.ndarray:
         z = np.array([z])
     result = np.zeros(x.shape)
     RFcode = """
@@ -72,16 +72,76 @@ def BoostRF(x,y,z):
     return result
 
 def BoostRJ(x,y,z,p):
+    if type(x) != np.ndarray:
+        x = np.array([x])
+    if type(y) != np.ndarray:
+        y = np.array([y])
+    if type(z) != np.ndarray:
+        z = np.array([z])
+    if type(p) != np.ndarray:
+        p = np.array([p])
+    result = np.empty(x.shape)
     RJcode = """
-    return_val = boost::math::ellint_rj(x, y, z, p);
+    for (int i = 0; i < Nx[0]; ++i){
+        result[i] = boost::math::ellint_rj(x[i], y[i], z[i], p[i]);
+    }
     """
-    return weave.inline(RJcode, ['x','y','z','p'], headers = ["<boost/math/special_functions/ellint_rj.hpp>"])
+    weave.inline(RJcode, ['x','y','z','p', 'result'], headers = ["<boost/math/special_functions/ellint_rj.hpp>"])
+    return result
 
 def BoostRC(x,y):
+    if type(x) != np.ndarray:
+        x = np.array([x])
+    if type(y) != np.ndarray:
+        y = np.array([y])
+    result = np.empty(x.shape)
     RCcode = """
-    return_val = boost::math::ellint_rc(x, y);
+    for (int i = 0; i < Nx[0]; ++i){
+        result[i] = boost::math::ellint_rc(x[i], y[i]);
+    }
     """
-    return weave.inline(RCcode, ['x','y'], headers = ["<boost/math/special_functions/ellint_rc.hpp>"])
+    weave.inline(RCcode, ['x','y','result'], headers = ["<boost/math/special_functions/ellint_rc.hpp>"])
+    return result
+
+def BoostRG(x, y, z):
+    if type(x) != np.ndarray:
+        x = np.array([x])
+    if type(y) != np.ndarray:
+        y = np.array([y])
+    if type(z) != np.ndarray:
+        z = np.array([z])
+    result = np.zeros(x.shape)
+    RGcode = """
+    for (int i = 0; i < Nx[0]; ++i){
+        result[i] = boost::math::ellint_rg(x[i], y[i], z[i]);
+    }
+    """
+    weave.inline(RGcode, ['x','y','z','result'], headers = ["<boost/math/special_functions/ellint_rg.hpp>"])
+    return result
+
+def JacobiCN(x, k):
+    if type(x) != np.ndarray:
+        x = np.array([x])
+    if type(k) != np.ndarray:
+        k = np.array([k])
+    cn = np.zeros(x.shape)
+    dn = np.copy(cn)
+    CNcode = """
+    for (int i = 0; i < Nx[0]; ++i){
+        boost::math::jacobi_elliptic(k[i], x[i], &cn[i],&dn[i]);
+    }
+    """
+    weave.inline(CNcode, ['x','k','dn','cn'], headers = ["<boost/math/special_functions/jacobi_elliptic.hpp>"])
+    return cn
+    
+def EllipticPi(n, x, k):
+    xSqr = x**2
+    kSqr = k**2
+    return x*BoostRF(1-xSqr, 1-kSqr*xSqr, 1.0) + n*x**3*BoostRJ(1-xSqr, 1-kSqr*xSqr, 1-n*xSqr)/3.0
+
+def InvBiquadratic(a1, a2, b1, b2, x, y):
+    """ Computes \int_x^y \frac{dt}{\sqrt{(a1 + b1 t^2)(a2 + b2 t^2)}} """
+    
 
 def InvSqrtQuartic(r1, r2, r3, r4, a, b=None):
     if b == None:
@@ -94,12 +154,12 @@ def InvSqrtQuartic(r1, r2, r3, r4, a, b=None):
 
 def TerribleIntegral(r1,r2,r3,r4,r5, a, b=None):
     if b == None:
-        U12 = math.sqrt((a - r1)*(a - r2)) + math.sqrt((a - r3)*(a - r4))
+        U12 = np.sqrt((a - r1)*(a - r2)) + np.sqrt((a - r3)*(a - r4))
         U12sqr = U12*U12
         Wsqr = U12sqr - (r3 - r1)*(r4 - r1)*(r5 - r2)/(r5 - r1)
         Qsqr = (a - r5)/(a - r1)*Wsqr
     else:
-        U12 = (math.sqrt((b-r1)*(b-r2)*(a-r3)*(a-r4)) + math.sqrt((b-r4)*(b-r3)*(a-r2)*(a-r1)))/(b-a)
+        U12 = (np.sqrt((b-r1)*(b-r2)*(a-r3)*(a-r4)) + np.sqrt((b-r4)*(b-r3)*(a-r2)*(a-r1)))/(b-a)
         U12sqr = U12*U12
         Wsqr = U12sqr - (r3 - r1)*(r4 - r1)*(r5 - r2)/(r5 - r1)
         Qsqr = ((a - r5)*(b - r5)/(a - r1)/(b - r1))*Wsqr

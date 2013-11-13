@@ -41,12 +41,17 @@ def Roots2(e, b):
     return r1, r2, r3 
 
 def ComputeDeflections(e, b):
-    r1, r2, r3 = Roots2(e,b)
+    bm = bmin(e)
+    result = np.zeros(b.shape)
+    fall_in= (b<=bm)
+    result[fall_in] = 0.0
+    r1, r2, r3 = Roots2(e,b[b>bmin(e)])
     x = (r3 - r1)*(r3 - r2)
     y = r3*(r3 - r2)
     z = r3*(r3 - r1)
     ellipf = CarlsonR.BoostRF(x, y, z)
-    return 4*b*ellipf - np.pi
+    result[np.invert(fall_in)] = 4*b[np.invert(fall_in)]*ellipf - np.pi
+    return result
 
 def Sigma(e):
     deflections, diff_sigma = DiffSigma(e)
@@ -87,7 +92,7 @@ def SolveForAngle(e, theta):
 E = 1+np.logspace(-5, 2, 1000)
 #sigma = np.array([Sigma(e) for e in E])
 
-print DiffSigma(1.1)
+#print DiffSigma(1.1)
 
 #print E.shape, sigma.shape
 #np.savetxt("sigma.dat", np.vstack((E, sigma)).T)
