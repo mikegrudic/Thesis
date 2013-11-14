@@ -8,8 +8,10 @@ import time
 pi=np.pi
 
 def deflection2(a, E, L):
+    result = np.copy(L)
     R_coeffs = (E**2-1,2,-a**2+E**2*a**2-L**2,2*E**2*a**2-4*E*a*L+2*L**2,0.0)
-    roots = np.sort(np.roots(R_coeffs))    
+    r_roots = np.sort(np.array([np.roots(c) for c in r_coeffs]), axis=1)
+    
     if len(roots[np.nonzero(roots.imag)]) != 0:
         raise Exception("Particle falls into the black hole!")
     r1, r2, r3, r4 = roots
@@ -23,14 +25,13 @@ def deflection2(a, E, L):
     part1 = (L - a*E)/math.sqrt(E**2 - 1) * int1
     part2 = -a*math.log((-rplus + r4)/(-rminus + r4))/(2.0*C1)
     part3 = - a*E/math.sqrt(E**2 - 1) * (int1 + (a**2 -a*L/E + rplus**2)/(rplus - rminus)*int2  - (a**2 -a*L/E + rminus**2)/(rplus - rminus)*int3)
-    print 2*part1
-    print 2*(part2+part3)
     return 2*(part1 + part2 + part3) - pi
 
 def deflection(a, E, L):
     R_coeffs = (E**2-1,2,-a**2+E**2*a**2-L**2,2*E**2*a**2-4*E*a*L+2*L**2,0.0)
-    roots = np.sort(np.roots(R_coeffs))
-    r3 = roots[-1]
+    roots = np.sort(np.array([np.roots(c) for c in r_coeffs]), axis=1)
+#    roots = np.sort(np.roots(R_coeffs))
+    r3 = roots[:,-1]
 #    m = r3*(r2-r1)/(r2*(r3-r1))
 
 #    p2 = lambda t: 1/math.sqrt((1-t*t)*(1-m*t*t))

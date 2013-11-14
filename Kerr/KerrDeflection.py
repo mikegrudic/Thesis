@@ -37,7 +37,8 @@ def EqDeflection(a, E, L):
     R_coeffs = (E**2-1,2,-a**2+E**2*a**2-L**2,2*E**2*a**2-4*E*a*L+2*L**2,0.0)
     roots = np.sort(np.roots(R_coeffs))
     if len(roots[np.nonzero(roots.imag)]) != 0:
-        raise Exception("Particle falls into the black hole!")
+#        raise Exception("Particle falls into the black hole!")
+        return np.zeros(L.shape)
     r1, r2, r3, r4 = roots
     C1 = math.sqrt(1-a**2)
     rplus, rminus = 1 + C1, 1 - C1
@@ -75,10 +76,16 @@ def SchwarzDeflection(E, b):
     return result
 
 def KerrDeflection(a, theta, E, bx, by):
+    L = bx*math.sqrt(C1)*math.sin(theta)
+    Q = (E**2 - 1)*((bx**2 - a**2)*mu0**2 + by**2)
+    ones = np.ones(bx.shape)
+    zeros = np.zeros(bx.shape)
 #    if a==0:
-#        deflection = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))
-        
+#        deflection = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))        
     mu0 = np.cos(theta)
+
+    if mu0 == 0:
+        return EqDeflection(a, E, L), np.pi/2
     s_mu = np.zeros(bx.shape, dtype=np.int64)
     if theta != 0 and theta != pi:
         s_mu = np.sign(-(2*bx*mu0+(-1 + 3*np.cos(2*theta))*by)*np.sin(theta))
@@ -89,10 +96,6 @@ def KerrDeflection(a, theta, E, bx, by):
     
     C1 = E**2 - 1
     C2 = math.sqrt(1-a**2)
-    ones = np.ones(bx.shape)
-    zeros = np.zeros(bx.shape)
-    L = bx*math.sqrt(C1)*math.sin(theta)
-    Q = (E**2 - 1)*((bx**2 - a**2)*mu0**2 + by**2)
 
 #Solve r and mu polynomials    
     r_coeffs = np.array([C1*ones, 2*ones, a**2*C1 - L**2 - Q, 2*((-(a*E) + L)**2 + Q), -a**2*Q]).T
@@ -100,11 +103,13 @@ def KerrDeflection(a, theta, E, bx, by):
 # r quartic
     r_roots = np.sort(np.array([np.roots(c) for c in r_coeffs]), axis=1)
 #mu biquadratic
+    discriminant = np.sqrt((bx**2 + by**2)**2 + 2*a**2*(bx - by)*(bx + by)*(-1 + mu0**2) + a**4*(-1 + mu0**2)**2)
     A = -a**2
     B = a**2 * (1 + mu0**2) - bx**2 - by**2
     C = by**2 + (bx**2 - a**2)*mu0**2
     q = -0.5*(B + np.sign(B)*np.sqrt(B**2 - 4*A*C))
     M1, M2 = np.sort((q/A, C/q),axis = 0)
+    aSqrM2 = (-bx**2 - by**2 + discriminant + a**2*(1+mu0**2))/2
     mu_max = np.sqrt(M2)
     mu_min = -np.sqrt(M2)
     kSqr = M2/(M2 - M1)
@@ -115,13 +120,16 @@ def KerrDeflection(a, theta, E, bx, by):
 #do complete integrals
     r1, r2, r3, r4 = r_roots[:,0], r_roots[:,1], r_roots[:,2], r_roots[:,3]
     r_integral = 2*InvSqrtQuartic(r1, r2, r3, r4, r4)
-    mu_complete_integral = 2*CarlsonR.BoostRF(zeros, 1.0-kSqr, ones)/A
+#    mu_complete_integral = 2*CarlsonR.BoostRF(zeros, 1.0-kSqr, ones)/A
+    mu_complete_integral = 2*CarlsonR.BoostRF(zeros, (bx**2+by**2+discriminant - a**2*(1+mu0**2))/2.0, discriminant)
+#    print mu_complete_integral
 
 #do partial mu integral from mu0 to mu_max    
     case1 = (mu0 != mu_max)*(mu0 != mu_min)
     mu_initial_integral = np.empty(bx.shape)
     if mu0 > 0:
         U1 = (np.abs(-mu0**4 + (M1[case1]+M2[case1])*mu0**2 + -M1[case1]*M2[case1] + (mu0**2 - mu_max[case1]**2)**2))/(mu_max[case1]-mu0)**2
+#        U1 = (-a**4*mu0**4 + (aSqrM2 + by**2(mu0**2 - 1) - a**2*mu0**2*(mu0**2 + 1))**2)/(aSqrM2 - a**2*mu0**2)
         mu_initial_integral[case1] = 2*CarlsonR.BoostRF(U1, U1 - (M1[case1]+M2[case1]) + 2*np.sqrt(-M1[case1]*M2[case1]), U1 - (M1[case1]+M2[case1]) - 2*np.sqrt(-M1[case1]*M2[case1]))/a
     else:
     #break into mu0 to 0 + 0 to mu_max
