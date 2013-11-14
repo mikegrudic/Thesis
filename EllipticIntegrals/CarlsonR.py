@@ -134,10 +134,11 @@ def JacobiCN(x, k):
     weave.inline(CNcode, ['x','k','dn','cn'], headers = ["<boost/math/special_functions/jacobi_elliptic.hpp>"])
     return cn
     
-def EllipticPi(n, x, k):
-    xSqr = x**2
-    kSqr = k**2
-    return x*BoostRF(1-xSqr, 1-kSqr*xSqr, 1.0) + n*x**3*BoostRJ(1-xSqr, 1-kSqr*xSqr, 1-n*xSqr)/3.0
+def LegendrePi(n, xSqr, kSqr):
+    return np.sqrt(xSqr)*BoostRF(1-xSqr, 1-kSqr*xSqr, np.ones(kSqr.shape)) + n*xSqr*(3.0/2)*BoostRJ(1-xSqr, 1-kSqr*xSqr, np.ones(xSqr.shape),1-n*xSqr)/3.0
+
+def LegendrePiComplete(n, kSqr):
+    return BoostRF(np.zeros(kSqr.shape), 1-kSqr, np.ones(kSqr.shape)) + n*BoostRJ(np.zeros(kSqr.shape), 1-kSqr, np.ones(kSqr.shape),1-n)/3.0
 
 def InvBiquadratic(a1, a2, b1, b2, x, y):
     """ Computes \int_x^y \frac{dt}{\sqrt{(a1 + b1 t^2)(a2 + b2 t^2)}} """

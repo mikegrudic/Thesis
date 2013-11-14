@@ -19,10 +19,12 @@ def deflection2(a, E, L):
     int1 = InvSqrtQuartic(r1, r2, r3, r4, r4)
     int2 = TerribleIntegral(r1, r2, r3, r4, rplus, r4)
     int3 = TerribleIntegral(r1, r2, r3, r4, rminus, r4)
-    
+
     part1 = (L - a*E)/math.sqrt(E**2 - 1) * int1
     part2 = -a*math.log((-rplus + r4)/(-rminus + r4))/(2.0*C1)
     part3 = - a*E/math.sqrt(E**2 - 1) * (int1 + (a**2 -a*L/E + rplus**2)/(rplus - rminus)*int2  - (a**2 -a*L/E + rminus**2)/(rplus - rminus)*int3)
+    print 2*part1
+    print 2*(part2+part3)
     return 2*(part1 + part2 + part3) - pi
 
 def deflection(a, E, L):
