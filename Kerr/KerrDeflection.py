@@ -33,6 +33,13 @@ def CubicRoots(e, b):
     weave.inline(code, ['e', 'b', 'r3', 'r1', 'r2'])
     return r1, r2, r3
 
+def bmin(e):
+    if e == "NULL":
+
+                return 3*math.sqrt(3)
+    else:
+        return math.sqrt((8 - 36*e**2 + 27*e**4 + e*(9*e**2 - 8)**(3.0/2.0))/2)/(e**2 - 1)
+
 def EqDeflection(a, E, L):
     R_coeffs = (E**2-1,2,-a**2+E**2*a**2-L**2,2*E**2*a**2-4*E*a*L+2*L**2,0.0)
     roots = np.sort(np.roots(R_coeffs))
@@ -63,29 +70,38 @@ def PhiTerribleIntegral(r1, r2, r3, r4, a, E, L):
     return 2*(part2 + part3)
 
 def SchwarzDeflection(E, b):
-    bm = bmin(e)
+    bm = bmin(E)
     result = np.zeros(b.shape)
     fall_in= (b<=bm)
     result[fall_in] = 0.0
-    r1, r2, r3 = Roots2(e,b[b>bmin(e)])
+    r1, r2, r3 = CubicRoots(E,b[b>bmin(E)])
     x = (r3 - r1)*(r3 - r2)
     y = r3*(r3 - r2)
     z = r3*(r3 - r1)
     ellipf = CarlsonR.BoostRF(x, y, z)
-    result[np.invert(fall_in)] = 4*b[np.invert(fall_in)]*ellipf - np.pi
+    result[np.invert(fall_in)] = 4*b[np.invert(fall_in)]*ellipf
     return result
 
 def KerrDeflection(a, theta, E, bx, by):
+    phi_result = np.empty(bx.shape)
+    mu_result = np.empty(bx.shape)
+    
+    mu0 = np.cos(theta)
+    C1 = E**2 - 1
+    C2 = math.sqrt(1-a**2)
     L = bx*math.sqrt(C1)*math.sin(theta)
     Q = (E**2 - 1)*((bx**2 - a**2)*mu0**2 + by**2)
     ones = np.ones(bx.shape)
     zeros = np.zeros(bx.shape)
-#    if a==0:
-#        deflection = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))        
-    mu0 = np.cos(theta)
+    if a==0.0:
+        sch_def = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))
+        print sch_def%(2*np.pi)
+        t1 = np.arctan2(by,bx)
+        print t1
+        phi_result = np.arctan2(np.cos(t1)*np.sin(sch_def), np.cos(sch_def)*math.sin(theta) + np.sin(sch_def)*math.cos(theta)*np.sin(t1))
+        theta_result = np.arccos(np.cos(sch_def)*math.cos(theta)+math.sin(theta)*np.sin(sch_def)*np.sin(t1))
+        return phi_result%(2*np.pi), theta_result
 
-    if mu0 == 0:
-        return EqDeflection(a, E, L), np.pi/2
     s_mu = np.zeros(bx.shape, dtype=np.int64)
     if theta != 0 and theta != pi:
         s_mu = np.sign(-(2*bx*mu0+(-1 + 3*np.cos(2*theta))*by)*np.sin(theta))
@@ -93,16 +109,35 @@ def KerrDeflection(a, theta, E, bx, by):
         s_mu = -np.ones(by.shape)
     else:
         s_mu = np.ones(by.shape)
-    
-    C1 = E**2 - 1
-    C2 = math.sqrt(1-a**2)
 
-#Solve r and mu polynomials    
+    #Solve r and mu polynomials    
+#    mu_coeffs = np.array([C1*a**2*ones, C1*a**2 - L**2 - Q, Q]).T
+    #solve r quartic
     r_coeffs = np.array([C1*ones, 2*ones, a**2*C1 - L**2 - Q, 2*((-(a*E) + L)**2 + Q), -a**2*Q]).T
-    mu_coeffs = np.array([C1*a**2*ones, C1*a**2 - L**2 - Q, Q]).T
-# r quartic
     r_roots = np.sort(np.array([np.roots(c) for c in r_coeffs]), axis=1)
-#mu biquadratic
+
+    #Return NaN deflection for trajectories which go into the hole
+    falls_in = np.sum(np.abs(r_roots.imag),axis=1) > 0.0
+    doesnt_fall_in = np.invert(falls_in)
+    phi_result[falls_in] = np.NaN
+    mu_result[falls_in] = np.NaN
+
+    L, bx, by, r_roots, zeros, ones, s_mu = L[doesnt_fall_in], bx[doesnt_fall_in], by[doesnt_fall_in], r_roots[doesnt_fall_in].real, zeros[doesnt_fall_in], ones[doesnt_fall_in], s_mu[doesnt_fall_in]
+
+    r1, r2, r3, r4 = r_roots[:,0], r_roots[:,1], r_roots[:,2], r_roots[:,3]
+
+    #Equatorial case is easy
+    if mu0-math.cos(np.pi/2) == 0.0 and np.all(by==0.0):
+        rplus, rminus = 1 + C2, 1 - C2
+        int1 = InvSqrtQuartic(r1, r2, r3, r4, r4)
+        int2 = TerribleIntegral(r1, r2, r3, r4, rplus, r4)
+        int3 = TerribleIntegral(r1, r2, r3, r4, rminus, r4)
+        part1 = (L - a*E)/math.sqrt(E**2 - 1) * int1
+        part2 = -a*np.log((-rplus + r4)/(-rminus + r4))/(2.0*C2)
+        part3 = -a*E/math.sqrt(E**2 - 1) * (int1 + (a**2 -a*L/E + rplus**2)/(rplus - rminus)*int2  - (a**2 -a*L/E + rminus**2)/(rplus - rminus)*int3)
+        return 2*(part1 + part2 + part3), ones*np.pi/2
+    
+    #mu biquadratic
     discriminant = np.sqrt((bx**2 + by**2)**2 + 2*a**2*(bx - by)*(bx + by)*(-1 + mu0**2) + a**4*(-1 + mu0**2)**2)
     A = -a**2
     B = a**2 * (1 + mu0**2) - bx**2 - by**2
@@ -116,13 +151,12 @@ def KerrDeflection(a, theta, E, bx, by):
     xSqr = np.abs(1 - mu0**2/M2)
     n = M2/(1-M2)
     A = a*np.sqrt(M2 - M1)
-
 #do complete integrals
-    r1, r2, r3, r4 = r_roots[:,0], r_roots[:,1], r_roots[:,2], r_roots[:,3]
     r_integral = 2*InvSqrtQuartic(r1, r2, r3, r4, r4)
 #    mu_complete_integral = 2*CarlsonR.BoostRF(zeros, 1.0-kSqr, ones)/A
+#    print (bx**2+by**2+ discriminant + a**2*(1+mu0**2))/2.0
+#    print discriminant
     mu_complete_integral = 2*CarlsonR.BoostRF(zeros, (bx**2+by**2+discriminant - a**2*(1+mu0**2))/2.0, discriminant)
-#    print mu_complete_integral
 
 #do partial mu integral from mu0 to mu_max    
     case1 = (mu0 != mu_max)*(mu0 != mu_min)
@@ -151,7 +185,7 @@ def KerrDeflection(a, theta, E, bx, by):
 # Do mu-integrals for phi deflection
     xSqr_init = np.abs(1 - mu0**2/M2)
     xSqr_final = np.abs(1 - mu_final**2/M2)
-  
+
     pi_complete = 2*CarlsonR.LegendrePiComplete(-n, kSqr)
     pi_init = CarlsonR.LegendrePi(-n, xSqr_init, kSqr)
     pi_final = CarlsonR.LegendrePi(-n, xSqr_final, kSqr)
@@ -162,9 +196,13 @@ def KerrDeflection(a, theta, E, bx, by):
     else:
         pi_final[mu_final > 0] = pi_complete[mu_final>0] - pi_final[mu_final>0]
 
-    P = 1/np.sqrt(M2 - M1)/(1-M2)        
+    P = 1/np.sqrt(M2 - M1)/(1-M2)
+        
     mu_phi_integral = (L*P/a*(alpha1*pi_init + alpha2*pi_final + alpha3*pi_complete) - a*E*r_integral)/np.sqrt(E**2 - 1)
     r_phi_integral = PhiTerribleIntegral(r1, r2, r3, r4, a, E, L)
     phi = mu_phi_integral + r_phi_integral
+    
+    phi_result[doesnt_fall_in] = phi
+    mu_result[doesnt_fall_in] = mu_final
 
-    return phi - pi, np.arccos(mu_final)
+    return phi_result, np.arccos(mu_result)

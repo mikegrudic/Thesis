@@ -43,8 +43,8 @@ def Roots2(e, b):
 def ComputeDeflections(e, b):
     bm = bmin(e)
     result = np.zeros(b.shape)
-    fall_in= (b<=bm)
-    result[fall_in] = 0.0
+    fall_in = (b<=bm)
+    result[fall_in] = np.NaN
     r1, r2, r3 = Roots2(e,b[b>bmin(e)])
     x = (r3 - r1)*(r3 - r2)
     y = r3*(r3 - r2)
