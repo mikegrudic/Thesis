@@ -35,8 +35,7 @@ def CubicRoots(e, b):
 
 def bmin(e):
     if e == "NULL":
-
-                return 3*math.sqrt(3)
+        return 3*math.sqrt(3)
     else:
         return math.sqrt((8 - 36*e**2 + 27*e**4 + e*(9*e**2 - 8)**(3.0/2.0))/2)/(e**2 - 1)
 
@@ -110,8 +109,6 @@ def KerrDeflection(a, theta, E, bx, by):
     else:
         s_mu = np.ones(by.shape)
 
-    #Solve r and mu polynomials    
-#    mu_coeffs = np.array([C1*a**2*ones, C1*a**2 - L**2 - Q, Q]).T
     #solve r quartic
     r_coeffs = np.array([C1*ones, 2*ones, a**2*C1 - L**2 - Q, 2*((-(a*E) + L)**2 + Q), -a**2*Q]).T
     r_roots = np.sort(np.array([np.roots(c) for c in r_coeffs]), axis=1)
