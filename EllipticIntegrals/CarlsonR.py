@@ -135,7 +135,7 @@ def JacobiCN(x, k):
     return cn
     
 def LegendrePi(n, xSqr, kSqr):
-    return np.sqrt(xSqr)*BoostRF(1-xSqr, 1-kSqr*xSqr, np.ones(kSqr.shape)) + n*xSqr*(3.0/2)*BoostRJ(1-xSqr, 1-kSqr*xSqr, np.ones(xSqr.shape),1-n*xSqr)/3.0
+    return np.sqrt(xSqr)*BoostRF(1-xSqr, 1-kSqr*xSqr, np.ones(kSqr.shape)) + n*xSqr**(3.0/2)*BoostRJ(1-xSqr, 1-kSqr*xSqr, np.ones(xSqr.shape),1-n*xSqr)/3.0
 
 def LegendrePiComplete(n, kSqr):
     return BoostRF(np.zeros(kSqr.shape), 1-kSqr, np.ones(kSqr.shape)) + n*BoostRJ(np.zeros(kSqr.shape), 1-kSqr, np.ones(kSqr.shape),1-n)/3.0

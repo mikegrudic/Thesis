@@ -72,7 +72,7 @@ def SchwarzDeflection(E, b):
     bm = bmin(E)
     result = np.zeros(b.shape)
     fall_in= (b<=bm)
-    result[fall_in] = 0.0
+    result[fall_in] = np.NaN
     r1, r2, r3 = CubicRoots(E,b[b>bmin(E)])
     x = (r3 - r1)*(r3 - r2)
     y = r3*(r3 - r2)
@@ -92,22 +92,22 @@ def KerrDeflection(a, theta, E, bx, by):
     Q = (E**2 - 1)*((bx**2 - a**2)*mu0**2 + by**2)
     ones = np.ones(bx.shape)
     zeros = np.zeros(bx.shape)
+
+    #Schwarzschild case
     if a==0.0:
         sch_def = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))
-        print sch_def%(2*np.pi)
         t1 = np.arctan2(by,bx)
-        print t1
         phi_result = np.arctan2(np.cos(t1)*np.sin(sch_def), np.cos(sch_def)*math.sin(theta) + np.sin(sch_def)*math.cos(theta)*np.sin(t1))
         theta_result = np.arccos(np.cos(sch_def)*math.cos(theta)+math.sin(theta)*np.sin(sch_def)*np.sin(t1))
         return phi_result%(2*np.pi), theta_result
 
     s_mu = np.zeros(bx.shape, dtype=np.int64)
     if theta != 0 and theta != pi:
-        s_mu = np.sign(-(2*bx*mu0+(-1 + 3*np.cos(2*theta))*by)*np.sin(theta))
+        s_mu = np.sign(-(2*bx*mu0+(-1 + 3*np.cos(2*theta))*by)*np.sin(theta)).astype(int)
     elif theta == 0:
-        s_mu = -np.ones(by.shape)
+        s_mu = -np.ones(by.shape).astype(int)
     else:
-        s_mu = np.ones(by.shape)
+        s_mu = np.ones(by.shape).astype(int)
 
     #solve r quartic
     r_coeffs = np.array([C1*ones, 2*ones, a**2*C1 - L**2 - Q, 2*((-(a*E) + L)**2 + Q), -a**2*Q]).T
@@ -142,6 +142,7 @@ def KerrDeflection(a, theta, E, bx, by):
     q = -0.5*(B + np.sign(B)*np.sqrt(B**2 - 4*A*C))
     M1, M2 = np.sort((q/A, C/q),axis = 0)
     aSqrM2 = (-bx**2 - by**2 + discriminant + a**2*(1+mu0**2))/2
+    aSqrM1 = (-bx**2 - by**2 - discriminant + a**2*(1+mu0**2))/2
     mu_max = np.sqrt(M2)
     mu_min = -np.sqrt(M2)
     kSqr = M2/(M2 - M1)
@@ -156,50 +157,56 @@ def KerrDeflection(a, theta, E, bx, by):
     mu_complete_integral = 2*CarlsonR.BoostRF(zeros, (bx**2+by**2+discriminant - a**2*(1+mu0**2))/2.0, discriminant)
 
 #do partial mu integral from mu0 to mu_max    
-    case1 = (mu0 != mu_max)*(mu0 != mu_min)
+    case1 = np.abs(mu_min-mu0) > 1e-16
     mu_initial_integral = np.empty(bx.shape)
     if mu0 > 0:
         U1 = (np.abs(-mu0**4 + (M1[case1]+M2[case1])*mu0**2 + -M1[case1]*M2[case1] + (mu0**2 - mu_max[case1]**2)**2))/(mu_max[case1]-mu0)**2
 #        U1 = (-a**4*mu0**4 + (aSqrM2 + by**2(mu0**2 - 1) - a**2*mu0**2*(mu0**2 + 1))**2)/(aSqrM2 - a**2*mu0**2)
         mu_initial_integral[case1] = 2*CarlsonR.BoostRF(U1, U1 - (M1[case1]+M2[case1]) + 2*np.sqrt(-M1[case1]*M2[case1]), U1 - (M1[case1]+M2[case1]) - 2*np.sqrt(-M1[case1]*M2[case1]))/a
     else:
-    #break into mu0 to 0 + 0 to mu_max
+        #break into mu0 to 0 + 0 to mu_max
         U2 = (-M1[case1]*M2[case1] + mu_max[case1]**4)/mu_max[case1]**2
         U3 = (np.sqrt(np.abs(-mu0**4 + (M1[case1]+M2[case1])*mu0**2 - M1[case1]*M2[case1]))+np.sqrt(-M1[case1]*M2[case1]))**2/mu0**2 #unstable, fix this
+        print U2
+        print U3
         mu_initial_integral[case1] = 2*(CarlsonR.BoostRF(U2, U2 - (M1[case1]+M2[case1]) + 2*np.sqrt(-M1[case1]*M2[case1]), U2 - (M1[case1]+M2[case1]) - 2*np.sqrt(-M1[case1]*M2[case1])) + CarlsonR.BoostRF(U3, U3 - (M1[case1]+M2[case1]) + 2*np.sqrt(-M1[case1]*M2[case1]), U3 - (M1[case1]+M2[case1]) - 2*np.sqrt(-M1[case1]*M2[case1])))/a
-
-    mu_initial_integral[np.invert(case1)] = 0.0 #mu_complete_integral[np.invert(case1)] 
+    mu_initial_integral[np.invert(case1)] = 0.0 #mu_complete_integral[np.invert(case1)]
+#    print mu_initial_integral
 
     N = np.zeros(bx.shape, dtype=np.uint64)
-    N = np.floor((r_integral + mu_initial_integral)/mu_complete_integral)
+    N = (np.floor((r_integral + mu_initial_integral)/mu_complete_integral)+0.5).astype(int)
+    
     alpha1 = s_mu
     alpha2 = s_mu*(-1)**N
     alpha3 = 2*np.floor((2*N + 3 - s_mu)/4) - 1
-
+  
     integral_remainder = (r_integral - alpha1*mu_initial_integral - alpha3*mu_complete_integral)/alpha2
     J = np.sqrt(M2-M1)*integral_remainder*a
     mu_final = mu_min*CarlsonR.JacobiCN(J, np.sqrt(kSqr))
+    
 # Do mu-integrals for phi deflection
     xSqr_init = np.abs(1 - mu0**2/M2)
     xSqr_final = np.abs(1 - mu_final**2/M2)
-
-    pi_complete = 2*CarlsonR.LegendrePiComplete(-n, kSqr)
-    pi_init = CarlsonR.LegendrePi(-n, xSqr_init, kSqr)
-    pi_final = CarlsonR.LegendrePi(-n, xSqr_final, kSqr)
+    P = 1/np.sqrt(M2 - M1)/(1-M2)
+    pi_complete = P*2*CarlsonR.LegendrePiComplete(-n, kSqr)*L/a
+    pi_init = P*CarlsonR.LegendrePi(-n, xSqr_init, kSqr)*L/a
+    pi_final = P*(CarlsonR.LegendrePi(-n, xSqr_final, kSqr))*L/a
+#    func = lambda th: (L[0]/math.sin(th)**2)/(np.sqrt(Q[0] - math.cos(th)**2*(-a**2*C1+L[0]**2/math.sin(th)**2)))
+#    pi_c = integrate.quad(func,np.arccos(mu_min[0]),np.arccos(mu_max[0]))[0]
+#    pi_f = integrate.quad(func,np.arccos(mu_min[0]), np.arccos(mu_final[0]))[0]
+#    pi_i = integrate.quad(func,theta,np.arccos(mu_max[0]))[0]
 
     if mu0 < 0.0:
         pi_init = pi_complete - pi_init
         pi_final[mu_final < 0] = pi_complete[mu_final<0] - pi_final[mu_final<0]
     else:
         pi_final[mu_final > 0] = pi_complete[mu_final>0] - pi_final[mu_final>0]
-
-    P = 1/np.sqrt(M2 - M1)/(1-M2)
         
-    mu_phi_integral = (L*P/a*(alpha1*pi_init + alpha2*pi_final + alpha3*pi_complete) - a*E*r_integral)/np.sqrt(E**2 - 1)
+    mu_phi_integral = ((alpha1*pi_init + alpha2*pi_final + alpha3*pi_complete) - a*E*r_integral)/np.sqrt(C1)
     r_phi_integral = PhiTerribleIntegral(r1, r2, r3, r4, a, E, L)
     phi = mu_phi_integral + r_phi_integral
     
     phi_result[doesnt_fall_in] = phi
     mu_result[doesnt_fall_in] = mu_final
 
-    return phi_result, np.arccos(mu_result)
+    return phi_result, np.arccos(mu_result)%(2*np.pi)
