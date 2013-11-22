@@ -25,7 +25,7 @@ def deflection2(a, E, L):
     part2 = -a*math.log((-rplus + r4)/(-rminus + r4))/(2.0*C1)
     part3 = - a*E/math.sqrt(E**2 - 1) * (int1 + (a**2 -a*L/E + rplus**2)/(rplus - rminus)*int2 - (a**2 -a*L/E + rminus**2)/(rplus - rminus)*int3)
     print part1, part2, part3
-    return 2*(part1 + part2 + part3) - pi
+    return 2*(part1 + part2 + part3)
 
 #def deflection(a, E, L):
 #    R_coeffs = (E**2-1,2,-a**2+E**2*a**2-L**2,2*E**2*a**2-4*E*a*L+2*L**2,0.0)
