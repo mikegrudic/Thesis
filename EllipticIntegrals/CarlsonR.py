@@ -8,10 +8,11 @@ RFcode = """
     static const double ERRTOL = 0.0025, THIRD = 1.0/3.0, C1 = 1.0/24.0, C2=0.1, C3 = 3.0/44.0, C4 = 1.0/14.0;
     static const double TINY = 5.0*DBL_MIN, BIG= 0.2*DBL_MAX;
     double alamb, ave, delx, dely, delz, e2, e3, sqrtx, sqrty, sqrtz, xt, yt, zt;
-    if (min(min(x,y),z) < 0.0 || min(min(x+y,x+z),y+z) < TINY || max(max(x,y),z) > BIG) throw("Invalid arguments in rf");
-    xt = x;
-    yt = y;
-    zt = z;
+    for (int i = 0; i < Nx[0]; ++i){
+    if (min(min(x[i],y[i]),z[i]) < 0.0 || min(min(x[i]+y[i],x[i]+z[i]),y[i]+z[i]) < TINY || max(max(x[i],y[i]),z[i]) > BIG) throw("Invalid arguments in rf");
+    xt = x[i];
+    yt = y[i];
+    zt = z[i];
     do {
         sqrtx = sqrt(xt);
         sqrty = sqrt(yt);
@@ -29,7 +30,8 @@ RFcode = """
     e3 = delx*dely*delz;
 
 
-    return_val = (1.0 + (C1*e2 - C2 - C3*e3)*e2 + C4*e3)/sqrt(ave);
+    result[i] = (1.0 + (C1*e2 - C2 - C3*e3)*e2 + C4*e3)/sqrt(ave);
+    }
     """
 
 RJcode = """
@@ -48,12 +50,20 @@ if (min(min(x,y),z) < 0.0 || min(min(x+y,x+z),min(y+z,abs(p))) < TINY || max(max
 
 
 def RF(x,y,z):
+    if type(x) != np.ndarray:
+        x = np.array([x])
+    if type(y) != np.ndarray:
+        y = np.array([y])
+    if type(z) != np.ndarray:
+        z = np.array([z])
+    result = np.zeros(x.shape)
     """ RF
     Calculates Carlson's elliptic integral of the first kind RF(x,y,z)
     
     C++ code comes directly from Numerical Recipes 3e by Press et al., section 6.12
     """
-    return weave.inline(RFcode,['x','y','z'],headers=["<float.h>","<algorithm>"])
+    weave.inline(RFcode,['x','y','z','result'],headers=["<float.h>","<algorithm>"])
+    return result
 
 def BoostRF(x,y,z):
     if type(x) != np.ndarray:

@@ -152,23 +152,28 @@ def KerrDeflection(a, theta, E, bx, by):
     mu_complete_integral = 2*CarlsonR.BoostRF(zeros, (bx**2+by**2+discriminant - a**2*(1+mu0**2))/2.0, discriminant)
     
     case1 = np.abs(np.abs(mu0)-mu_max) > 1e-16
-    print aSqrM2
-    U1 = ((-aSqrM2**2 + (aSqrM1+aSqrM2)*a**2*mu0**2 - aSqrM1*aSqrM2 + (a**2*mu0**2 - aSqrM2)**2)/(np.sqrt(aSqrM2)-a*np.abs(mu0))**2)[case1]
-    y = U1 - ((aSqrM1+aSqrM2) + 2*np.sqrt(-aSqrM1*aSqrM2))[case1]
-    z = U1 - ((aSqrM1+aSqrM2) - 2*np.sqrt(-aSqrM1*aSqrM2))[case1]
+#    U1 = ((-aSqrM2**2 + (aSqrM1+aSqrM2)*a**2*mu0**2 - aSqrM1*aSqrM2 + (a**2*mu0**2 - aSqrM2)**2)/(np.sqrt(aSqrM2)-a*np.abs(mu0))**2)[case1]
+#    y = U1 - ((aSqrM1+aSqrM2) + 2*np.sqrt(-aSqrM1*aSqrM2))[case1]
+#    z = U1 - ((aSqrM1+aSqrM2) - 2*np.sqrt(-aSqrM1*aSqrM2))[case1]
     mu_initial_integral = np.empty(mu_complete_integral.shape)
-    mu_initial_integral[case1] = 2*CarlsonR.BoostRF(U1, y, z)
+#    mu_initial_integral[case1] = 2*CarlsonR.BoostRF(U1, y, z)
+#    print mu0
+#    print mu_initial_integral
+    mu_initial_integral[case1] = (mu_complete_integral/2 - 1/np.sqrt(-M1*M2)*math.fabs(mu0)*CarlsonR.RF((M2-mu0**2)/M2, (M1-mu0**2)/M1, ones)/a)[case1]
+#    print mu_initial_integral
     mu_initial_integral[np.invert(case1)] = mu_complete_integral[np.invert(case1)]
 
-    mu_initial_integral[s_mu==-1] = mu_complete_integral[s_mu==-1] - mu_initial_integral[s_mu==-1]
+    mu_initial_integral[s_mu==1] = mu_complete_integral[s_mu==1] - mu_initial_integral[s_mu==1]
+
     N = np.floor((r_integral - mu_initial_integral)/mu_complete_integral)
 
     integral_remainder = r_integral - N*mu_complete_integral - mu_initial_integral
     
-    alpha = np.sign(mu0)*s_mu*(-1)**N
+    alpha = s_mu*(-1)**N
 
-    J = np.sqrt(M2-M1)*(integral_remainder)*a
-    mu_final = mu_max*CarlsonR.JacobiCN(J, np.sqrt(kSqr))*np.sign(mu0)*alpha
+    J = np.sqrt(M2-M1)*integral_remainder*a
+    mu_final = mu_max*CarlsonR.JacobiCN(J, np.sqrt(kSqr))*alpha*(-np.sign(mu0))
+#    print mu_final
 
 # Do mu-integrals for phi deflection
     xSqr_init = 1 - mu0**2/M2
@@ -176,11 +181,13 @@ def KerrDeflection(a, theta, E, bx, by):
 
     P = 1/np.sqrt(M2 - M1)/(1-M2)
 
-#    pi_complete = P*2*CarlsonR.LegendrePiComplete(-n, kSqr)*L/a
-    pi_complete = 2*(BoostRF(zeros,-M1*(M2-1)**2 , (1-M2)**2*(M2-M1)) - P*n*BoostRJ(zeros, M1/(M1-M2), ones, M1/(M1-M2))/3.0)
+    pi_complete = P*2*CarlsonR.LegendrePiComplete(-n, kSqr)
     pi_init = P*CarlsonR.LegendrePi(-n, xSqr_init, kSqr)
     pi_final = P*CarlsonR.LegendrePi(-n, xSqr_final, kSqr)
     
+#    print pi_complete
+#    print pi_init
+#    print pi_final
     if mu0>0:
         pi_init[s_mu==-1] = pi_complete[s_mu==-1] - pi_init[s_mu==-1]
     else:
