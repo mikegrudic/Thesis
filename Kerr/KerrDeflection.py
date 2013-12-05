@@ -163,7 +163,8 @@ def KerrDeflection(a, theta, E, bx, by):
 #    print mu_initial_integral
     mu_initial_integral[np.invert(case1)] = mu_complete_integral[np.invert(case1)]
 
-    mu_initial_integral[s_mu==1] = mu_complete_integral[s_mu==1] - mu_initial_integral[s_mu==1]
+    A = s_mu*np.sign(mu0) == 1    
+    mu_initial_integral[A] = mu_complete_integral[A] - mu_initial_integral[A]
 
     N = np.floor((r_integral - mu_initial_integral)/mu_complete_integral)
 
@@ -172,7 +173,7 @@ def KerrDeflection(a, theta, E, bx, by):
     alpha = s_mu*(-1)**N
 
     J = np.sqrt(M2-M1)*integral_remainder*a
-    mu_final = mu_max*CarlsonR.JacobiCN(J, np.sqrt(kSqr))*alpha*(-np.sign(mu0))
+    mu_final = mu_max*CarlsonR.JacobiCN(J, np.sqrt(kSqr))*alpha
 #    print mu_final
 
 # Do mu-integrals for phi deflection
@@ -185,16 +186,18 @@ def KerrDeflection(a, theta, E, bx, by):
     pi_init = P*CarlsonR.LegendrePi(-n, xSqr_init, kSqr)
     pi_final = P*CarlsonR.LegendrePi(-n, xSqr_final, kSqr)
     
-#    print pi_complete
-#    print pi_init
-#    print pi_final
     if mu0>0:
         pi_init[s_mu==-1] = pi_complete[s_mu==-1] - pi_init[s_mu==-1]
     else:
-        pi_init[s_mu==1] = pi_complete[s_mu==1] - pi_init[s_mu==1]
+        pi_init[s_mu==1] = pi_complete[s_mu==1] - pi_init[s_mu==1]        
 
     A = integral_remainder > mu_complete_integral/2
     pi_final[A] = pi_complete[A] - pi_final[A]
+
+    print pi_complete
+    print pi_init
+    print pi_final
+    print N
     
     mu_phi_integral = ((pi_init + pi_final + N*pi_complete)*L/a - a*E*r_integral)/np.sqrt(C1)
     
