@@ -61,7 +61,18 @@ def SchwarzDeflection(E, b):
     result[np.invert(fall_in)] = 4*b[np.invert(fall_in)]*ellipf
     return result
 
-
+def EquatorialDeflection(a, E, b, roots):
+    C1 = math.sqrt(1-a**2)
+    L = b*math.sqrt(E**2-1)
+    rplus, rminus = 1 + C1, 1 - C1
+    r1, r2, r3, r4 = roots
+    int1 = InvSqrtQuartic(r1, r2, r3, r4, r4)
+    int2 = TerribleIntegral(r1, r2, r3, r4, rplus, r4)
+    int3 = TerribleIntegral(r1, r2, r3, r4, rminus, r4)
+    part1 = (L - a*E)/math.sqrt(E**2 - 1) * int1
+    part3 = a*E/math.sqrt(E**2 - 1) * (int1 + (a**2 -a*L/E + rplus**2)/(rplus - rminus)*int2  - (a**2 -a*L/E + rminus**2)/(rplus - rminus)*int3)
+    phi_result = 2*(part1 + part3)
+    return phi_result%(2*np.pi)
 
 def KerrDeflection(a, theta, E, bx, by):
     phi_result = np.empty(bx.shape)
@@ -121,14 +132,7 @@ def KerrDeflection(a, theta, E, bx, by):
     
     #Equatorial case is easy
     if mu0-math.cos(np.pi/2) == 0.0 and np.all(by==0.0):
-        rplus, rminus = 1 + C2, 1 - C2
-        int1 = InvSqrtQuartic(r1, r2, r3, r4, r4)
-        int2 = TerribleIntegral(r1, r2, r3, r4, rplus, r4)
-        int3 = TerribleIntegral(r1, r2, r3, r4, rminus, r4)
-        part1 = (L - a*E)/math.sqrt(E**2 - 1) * int1
-#        part2 = -a*np.log((-rplus + r4)/(-rminus + r4))/(2.0*C2)
-        part3 = a*E/math.sqrt(E**2 - 1) * (int1 + (a**2 -a*L/E + rplus**2)/(rplus - rminus)*int2  - (a**2 -a*L/E + rminus**2)/(rplus - rminus)*int3)
-        phi_result[doesnt_fall_in] = 2*(part1 + part3)
+        phi_result[doesnt_fall_in] = EquatorialDeflection(a, E, bx, (r1,r2,r3,r4))
         return phi_result%(2*np.pi), ones*np.pi/2
     
     #mu biquadratic
@@ -152,18 +156,12 @@ def KerrDeflection(a, theta, E, bx, by):
     mu_complete_integral = 2*CarlsonR.BoostRF(zeros, (bx**2+by**2+discriminant - a**2*(1+mu0**2))/2.0, discriminant)
     
     case1 = np.abs(np.abs(mu0)-mu_max) > 1e-16
-#    U1 = ((-aSqrM2**2 + (aSqrM1+aSqrM2)*a**2*mu0**2 - aSqrM1*aSqrM2 + (a**2*mu0**2 - aSqrM2)**2)/(np.sqrt(aSqrM2)-a*np.abs(mu0))**2)[case1]
-#    y = U1 - ((aSqrM1+aSqrM2) + 2*np.sqrt(-aSqrM1*aSqrM2))[case1]
-#    z = U1 - ((aSqrM1+aSqrM2) - 2*np.sqrt(-aSqrM1*aSqrM2))[case1]
     mu_initial_integral = np.empty(mu_complete_integral.shape)
-#    mu_initial_integral[case1] = 2*CarlsonR.BoostRF(U1, y, z)
-#    print mu0
-#    print mu_initial_integral
     mu_initial_integral[case1] = (mu_complete_integral/2 - 1/np.sqrt(-M1*M2)*math.fabs(mu0)*CarlsonR.RF((M2-mu0**2)/M2, (M1-mu0**2)/M1, ones)/a)[case1]
-#    print mu_initial_integral
+
     mu_initial_integral[np.invert(case1)] = mu_complete_integral[np.invert(case1)]
 
-    A = s_mu*np.sign(mu0) == 1    
+    A = np.sign(by)*np.sign(mu0) == -1    
     mu_initial_integral[A] = mu_complete_integral[A] - mu_initial_integral[A]
 
     N = np.floor((r_integral - mu_initial_integral)/mu_complete_integral)
@@ -174,7 +172,6 @@ def KerrDeflection(a, theta, E, bx, by):
 
     J = np.sqrt(M2-M1)*integral_remainder*a
     mu_final = mu_max*CarlsonR.JacobiCN(J, np.sqrt(kSqr))*alpha
-#    print mu_final
 
 # Do mu-integrals for phi deflection
     xSqr_init = 1 - mu0**2/M2
@@ -193,11 +190,6 @@ def KerrDeflection(a, theta, E, bx, by):
 
     A = integral_remainder > mu_complete_integral/2
     pi_final[A] = pi_complete[A] - pi_final[A]
-
-    print pi_complete
-    print pi_init
-    print pi_final
-    print N
     
     mu_phi_integral = ((pi_init + pi_final + N*pi_complete)*L/a - a*E*r_integral)/np.sqrt(C1)
     
