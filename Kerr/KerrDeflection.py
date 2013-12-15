@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from scipy import weave, integrate, linalg
+from scipy import weave, integrate, linalg, optimize
 import CarlsonR
 from CarlsonR import *
 
@@ -62,9 +62,6 @@ def SchwarzDeflection(E, b):
     return result
 
 def WeakDeflection(E, b):
-#    result = np.zeros(b.shape)
-#    result.fill(pi)
-
     e2 = E**2 - 1.0
     wd_coeffs = np.array([pi*(255255/256. + 1155/(4.*e2**3) + 45045/(32.*e2**2) + 135135/(64.*e2)),
                         716.8 + 2/(5.*e2**5) - 4/e2**4 + 64/e2**3 + 640/e2**2 + 1280/e2,
@@ -156,7 +153,7 @@ def KerrDeflection(a, theta, E, bx, by):
     #mu biquadratic
     discriminant = np.sqrt((bx**2 + by**2)**2 + 2*a**2*(bx - by)*(bx + by)*(-1 + mu0**2) + a**4*(-1 + mu0**2)**2)
     A = -a**2
-    B = a**2 * (1 + mu0**2) - bx**2 - by**2
+    B = a**2*(1 + mu0**2) - bx**2 - by**2
     C = by**2 + (bx**2 - a**2)*mu0**2
     q = -0.5*(B + np.sign(B)*np.sqrt(B**2 - 4*A*C))
     M1, M2 = np.sort((q/A, C/q),axis = 0)
@@ -172,15 +169,16 @@ def KerrDeflection(a, theta, E, bx, by):
 
     mu_complete_integral = 2*CarlsonR.BoostRF(zeros, (bx**2+by**2+discriminant - a**2*(1+mu0**2))/2.0, discriminant)
     
-    case1 = np.abs(np.abs(mu0)-mu_max) > 1e-16
+    case1 = np.abs(M2-mu0**2) > 2e-16
     mu_initial_integral = np.empty(mu_complete_integral.shape)
-    mu_initial_integral[case1] = (mu_complete_integral/2 - 1/np.sqrt(-M1*M2)*math.fabs(mu0)*CarlsonR.RF((M2-mu0**2)/M2, (M1-mu0**2)/M1, ones)/a)[case1]
+#    mu_initial_integral[case1] = (mu_complete_integral/2 - 1/np.sqrt(-M1*M2)*math.fabs(mu0)*CarlsonR.RF(np.abs(M2-mu0**2)/M2, (M1-mu0**2)/M1, ones)/a)[case1]
+    mu_initial_integral[case1] = (CarlsonR.BoostRF(mu0**2, M2*(mu0**2 - M1)/(M2-M1), M2)*np.sqrt((np.abs(M2 - mu0**2))/(M2-M1))/a)[case1]
 
     mu_initial_integral[np.invert(case1)] = mu_complete_integral[np.invert(case1)]
 
     A = np.sign(by)*np.sign(mu0) == -1    
     mu_initial_integral[A] = mu_complete_integral[A] - mu_initial_integral[A]
-
+    
     N = np.floor((r_integral - mu_initial_integral)/mu_complete_integral)
 
     integral_remainder = r_integral - N*mu_complete_integral - mu_initial_integral
@@ -220,11 +218,15 @@ def KerrDeflection(a, theta, E, bx, by):
     return phi_result%(2*pi), np.arccos(mu_result)%(pi)
 
 def KerrTrajectory(a, theta, E, bx, by, N):
+#    N = 2*N   
     mu0 = math.cos(theta)
     C1 = E**2 - 1
     C2 = math.sqrt(1-a**2)
+    rplus, rminus = 1 + C2, 1 - C2
     L = bx*math.sqrt(C1)*math.sin(theta)
-    Q = (E**2 - 1)*((bx**2 - a**2)*mu0**2 + by**2)    
+    Q = (E**2 - 1)*((bx**2 - a**2)*mu0**2 + by**2)
+    zeros = np.zeros(N)
+    ones = np.ones(N)
 
     if -1 < mu0 < 1:
         if by==0:
@@ -242,8 +244,8 @@ def KerrTrajectory(a, theta, E, bx, by, N):
     r_coeffs = np.array([C1, 2, a**2*C1 - L**2 - Q, 2*((-(a*E) + L)**2 + Q), -a**2*Q])    
     r1, r2, r3, r4 = r_roots = np.sort(np.roots(r_coeffs))
 
-    if np.sum(r_roots.imag) > 0.0 or np.max(r_roots.real) < 1+C2:
-        raise Exception( "Capture orbits not implemented.")
+#    if np.sum(r_roots.imag) > 0.0 or np.max(r_roots.real) < 1+C2:
+#        raise Exception( "Capture orbits not implemented.")
 
     discriminant = np.sqrt((bx**2 + by**2)**2 + 2*a**2*(bx - by)*(bx + by)*(-1 + mu0**2) + a**4*(-1 + mu0**2)**2)
     A = -a**2
@@ -251,64 +253,86 @@ def KerrTrajectory(a, theta, E, bx, by, N):
     C = by**2 + (bx**2 - a**2)*mu0**2
     q = -0.5*(B + np.sign(B)*np.sqrt(B**2 - 4*A*C))
     M1, M2 = np.sort((q/A, C/q),axis = 0)
-    aSqrM2 = (-bx**2 - by**2 + discriminant + a**2*(1+mu0**2))/2
-    aSqrM1 = (-bx**2 - by**2 - discriminant + a**2*(1+mu0**2))/2
+#    aSqrM2 = (-bx**2 - by**2 + discriminant + a**2*(1+mu0**2))/2
+#    aSqrM1 = (-bx**2 - by**2 - discriminant + a**2*(1+mu0**2))/2
     mu_max = np.sqrt(M2)
     mu_min = -np.sqrt(M2)
     kSqr = M2/(M2 - M1)
     n = M2/(1-M2)    
 
+    #r-coordinates to calculate
+#    r = (r4 + np.logspace(3, -3, N/2))
+#    r = np.concatenate((r,r[::-1]))
+#    print r
     r_full = 2*InvSqrtQuartic(r1, r2, r3, r4, r4)
-    r_integral = np.linspace(0, r_full, N)
-    zeros = np.zeros(N)
-    ones = np.ones(N)
+    r_integral = np.linspace(0,r_full,N)
+
+    f = lambda u, n: InvSqrtQuartic(r1, r2, r3, r4, 1/u) - r_integral[n]
+    r = np.empty(N)
+    r[0] = np.inf
+    r[1:N/2] = 1/np.array([optimize.brentq(f, 1e-16, 1/r4, args = (m,)) for m in xrange(1,N/2)])
+    r[N/2:] = r[:N/2][::-1]
+
+#    r_integral = np.empty(N)
+#    r_integral[:N/2] = InvSqrtQuartic(ones[:N/2]*r1, ones[:N/2]*r2, ones[:N/2]*r3, ones[:N/2]*r4, r[:N/2])
+#    r_integral[N/2:] = r_full - r_integral[:N/2][::-1]
     
     mu_complete_integral = 2*CarlsonR.BoostRF(0.0, (bx**2+by**2+discriminant - a**2*(1+mu0**2))/2.0, discriminant)
 
-    if np.abs(np.abs(mu0) - mu_max) > 1e-16:
-        mu_initial_integral = (mu_complete_integral/2 - 1/np.sqrt(-M1*M2)*math.fabs(mu0)*CarlsonR.RF((M2-mu0**2)/M2, (M1-mu0**2)/M1, ones)/a)
-    else:
-        mu_initial_integral = mu_complete_integral
+    mu_initial_integral = CarlsonR.BoostRF(mu0**2, M2*(mu0**2 - M1)/(M2-M1), M2)*np.sqrt((np.abs(M2 - mu0**2))/(M2-M1))/a
 
     if np.sign(by)*np.sign(mu0) == -1:
         mu_initial_integral = mu_complete_integral - mu_initial_integral
 
-    N = np.floor((r_integral - mu_initial_integral)/mu_complete_integral)
+    case1 = r_integral < mu_initial_integral
+    case2 = np.invert(case1)
+        
+    nTurns = np.empty(N)
+    nTurns[case1] = 0
+    nTurns[case2] = np.floor((r_integral[case2] - mu_initial_integral)/mu_complete_integral)
 
-    integral_remainder = r_integral - N*mu_complete_integral - mu_initial_integral
+    integral_remainder = np.abs(r_integral - nTurns*mu_complete_integral - mu_initial_integral)
     
-    alpha = s_mu*(-1)**N
+    alpha = s_mu*(-1)**nTurns
 
     J = np.sqrt(M2-M1)*integral_remainder*a
-    mu_final = mu_max*CarlsonR.JacobiCN(J, np.sqrt(kSqr))*alpha
 
-    print np.arccos(mu_final)
+    mu_final = mu_max*CarlsonR.JacobiCN(J, ones*np.sqrt(kSqr))*alpha
     
 # Do mu-integrals for phi deflection
-#    xSqr_init = 1 - mu0**2/M2
-#    xSqr_final = 1 - mu_final**2/M2
+    xSqr_init = np.abs(1 - mu0**2/M2)
+    xSqr_final = np.abs(1 - mu_final**2/M2)
+    P = 1/np.sqrt(M2 - M1)/(1-M2)
+#    print 1-M2
 
-#    P = 1/np.sqrt(M2 - M1)/(1-M2)
+    pi_complete = P*2*CarlsonR.LegendrePiComplete(-n, kSqr)
+    pi_init = P*CarlsonR.LegendrePi(-n, xSqr_init, kSqr)
+    pi_final = P*CarlsonR.LegendrePi(-n*ones, xSqr_final, ones*kSqr)
+        
+    if mu0*s_mu < 0:
+        pi_init = pi_complete - pi_init
 
-#    pi_complete = P*2*CarlsonR.LegendrePiComplete(-n, kSqr)
-#    pi_init = P*CarlsonR.LegendrePi(-n, xSqr_init, kSqr)
-#    pi_final = P*CarlsonR.LegendrePi(-n, xSqr_final, kSqr)
-    
-#    if mu0>0:
-#        pi_init[s_mu==-1] = pi_complete[s_mu==-1] - pi_init[s_mu==-1]
-#    else:
-#        pi_init[s_mu==1] = pi_complete[s_mu==1] - pi_init[s_mu==1]        
+    A = integral_remainder > mu_complete_integral/2
+    pi_final[case2*A] = pi_complete - pi_final[A]
 
-#    A = integral_remainder > mu_complete_integral/2
-#    pi_final[A] = pi_complete[A] - pi_final[A]
-    
-#    mu_phi_integral = ((pi_init + pi_final + N*pi_complete)*L/a - a*E*r_integral)/np.sqrt(C1)
-    
-#    r_phi_integral = PhiTerribleIntegral(r1, r2, r3, r4, a, E, L)
+    mu_phi_integral = np.empty(N)
+    mu_phi_integral[case1] = np.abs(pi_init - pi_final[case1])*L/a
+    mu_phi_integral[case2] = np.abs(pi_init + pi_final[case2] + nTurns[case2]*pi_complete)*L/a
+    mu_phi_integral = (mu_phi_integral - a*E*r_integral)/math.sqrt(C1)
 
-#    phi = mu_phi_integral + r_phi_integral
-    
-#    phi_result[doesnt_fall_in] = phi
-#    mu_result[doesnt_fall_in] = mu_final
+#    print mu_phi_integral
+#    mu_phi_integral = (np.abs(pi_init + pi_final + N*pi_complete)*L/a - a*E*r_integral)/np.sqrt(C1)
 
-#    return phi_result%(2*pi), np.arccos(mu_result)%(pi)
+    r_phi_int_full = PhiTerribleIntegral(r1, r2, r3, r4, a, E, L)
+
+    r_phi_int2 = TerribleIntegral(r1, r2, r3, r4, rplus, r[1:N/2])
+    r_phi_int3 = TerribleIntegral(r1, r2, r3, r4, rminus, r[1:N/2])
+
+    r_phi_integral = np.empty(N)
+    r_phi_integral[0] = 0.0
+    r_phi_integral[1:N/2] = a*E/math.sqrt(E**2-1)*(r_integral[1:N/2] + (a**2 -a*L/E + rplus**2)/(rplus - rminus)*r_phi_int2  - (a**2 -a*L/E + rminus**2)/(rplus - rminus)*r_phi_int3)
+    r_phi_integral[N/2:] = r_phi_int_full - r_phi_integral[:N/2][::-1]
+
+    phi = mu_phi_integral + r_phi_integral
+
+    return r, phi, np.arccos(mu_final)

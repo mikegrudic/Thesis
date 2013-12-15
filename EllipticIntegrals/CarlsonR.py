@@ -143,6 +143,21 @@ def JacobiCN(x, k):
     """
     weave.inline(CNcode, ['x','k','dn','cn'], headers = ["<boost/math/special_functions/jacobi_elliptic.hpp>"])
     return cn
+
+def JacobiSN(x, k):
+    if type(x) != np.ndarray:
+        x = np.array([x])
+    if type(k) != np.ndarray:
+        k = np.array([k])
+    cn = np.zeros(x.shape)
+    dn = np.copy(cn)
+    CNcode = """
+    for (int i = 0; i < Nx[0]; ++i){
+        boost::math::jacobi_elliptic(k[i], x[i], &cn[i],&dn[i]);
+    }
+    """
+    weave.inline(CNcode, ['x','k','dn','cn'], headers = ["<boost/math/special_functions/jacobi_elliptic.hpp>"])
+    return np.sqrt(1-cn)
     
 def LegendrePi(n, xSqr, kSqr):
     return np.sqrt(xSqr)*BoostRF(1-xSqr, 1-kSqr*xSqr, np.ones(kSqr.shape)) + n*xSqr**(3.0/2)*BoostRJ(1-xSqr, 1-kSqr*xSqr, np.ones(xSqr.shape),1-n*xSqr)/3.0
@@ -150,8 +165,9 @@ def LegendrePi(n, xSqr, kSqr):
 def LegendrePiComplete(n, kSqr):
     return BoostRF(np.zeros(kSqr.shape), 1-kSqr, np.ones(kSqr.shape)) + n*BoostRJ(np.zeros(kSqr.shape), 1-kSqr, np.ones(kSqr.shape),1-n)/3.0
 
-def InvBiquadratic(a1, a2, b1, b2, x, y):
+#def InvBiquadratic(a1, a2, b1, b2, x, y):
     """ Computes \int_x^y \frac{dt}{\sqrt{(a1 + b1 t^2)(a2 + b2 t^2)}} """
+#    alpha, beta, gamma = np.sort((a1*b2, a2*b1, np.zeros(a1.shape)
     
 
 def InvSqrtQuartic(r1, r2, r3, r4, a, b=None):
