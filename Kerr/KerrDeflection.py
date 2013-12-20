@@ -53,7 +53,7 @@ def SchwarzDeflection(E, b):
     result = np.zeros(b.shape)
     fall_in= (b<=bm)
     result[fall_in] = np.NaN
-    r1, r2, r3 = CubicRoots(E,b[b>bmin(E)])
+    r1, r2, r3 = CubicRoots(E,b[np.invert(fall_in)])
     x = (r3 - r1)*(r3 - r2)
     y = r3*(r3 - r2)
     z = r3*(r3 - r1)
@@ -98,7 +98,13 @@ def TiltCoords(deflection, theta, bx, by):
 def KerrDeflection(a, theta, E, bx, by):
     phi_result = np.empty(bx.shape)
     mu_result = np.empty(bx.shape)
-    
+
+    #Schwarzschild case
+    if a==0.0:
+        sch_def = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))
+        phi_result, theta_result = TiltCoords(sch_def, theta, bx, by)
+        return phi_result%(2*pi), theta_result%(pi)
+
     mu0 = math.cos(theta)
     C1 = E**2 - 1
     C2 = math.sqrt(1-a**2)
@@ -106,12 +112,6 @@ def KerrDeflection(a, theta, E, bx, by):
     Q = (E**2 - 1)*((bx**2 - a**2)*mu0**2 + by**2)
     ones = np.ones(bx.shape)
     zeros = np.zeros(bx.shape)
-
-    #Schwarzschild case
-    if a==0.0:
-        sch_def = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))
-        phi_result, theta_result = TiltCoords(sch_def, theta, bx, by)
-        return phi_result%(2*pi), theta_result%(pi)
 
     s_mu = np.empty(bx.shape)
     if -1 < mu0 < 1:
@@ -124,7 +124,7 @@ def KerrDeflection(a, theta, E, bx, by):
     else:
         s_mu = 1
 
-    #solve r quartic
+    #solve r quartic by finding the eigenvalues of its companion matrix
     r_coeffs = np.array([C1*ones, 2*ones, a**2*C1 - L**2 - Q, 2*((-(a*E) + L)**2 + Q), -a**2*Q])
 
     r_coeffs = r_coeffs/C1
@@ -140,7 +140,8 @@ def KerrDeflection(a, theta, E, bx, by):
     doesnt_fall_in = np.invert(falls_in)
     phi_result[falls_in] = np.NaN
     mu_result[falls_in] = np.NaN
-    
+
+    #from here only look at trajectories which don't go into the hole
     L, bx, by, r_roots, zeros, ones, s_mu = L[doesnt_fall_in], bx[doesnt_fall_in], by[doesnt_fall_in], r_roots[doesnt_fall_in].real, zeros[doesnt_fall_in], ones[doesnt_fall_in], s_mu[doesnt_fall_in]
 
     r1, r2, r3, r4 = r_roots.T
@@ -148,7 +149,7 @@ def KerrDeflection(a, theta, E, bx, by):
     #Equatorial case is easy
     if mu0-math.cos(pi/2) == 0.0 and np.all(by==0.0):
         phi_result[doesnt_fall_in] = EquatorialDeflection(a, E, bx, (r1,r2,r3,r4))
-        return phi_result%(2*pi), ones*pi/2
+        return phi_result, ones*pi/2
     
     #mu biquadratic
     discriminant = np.sqrt((bx**2 + by**2)**2 + 2*a**2*(bx - by)*(bx + by)*(-1 + mu0**2) + a**4*(-1 + mu0**2)**2)
@@ -171,8 +172,7 @@ def KerrDeflection(a, theta, E, bx, by):
     
     case1 = np.abs(M2-mu0**2) > 2e-16
     mu_initial_integral = np.empty(mu_complete_integral.shape)
-#    mu_initial_integral[case1] = (mu_complete_integral/2 - 1/np.sqrt(-M1*M2)*math.fabs(mu0)*CarlsonR.RF(np.abs(M2-mu0**2)/M2, (M1-mu0**2)/M1, ones)/a)[case1]
-    mu_initial_integral[case1] = (CarlsonR.BoostRF(mu0**2, M2*(mu0**2 - M1)/(M2-M1), M2)*np.sqrt((np.abs(M2 - mu0**2))/(M2-M1))/a)[case1]
+    mu_initial_integral[case1] = (CarlsonR.BoostRF(mu0**2, M2*(mu0**2 - M1)/(M2-M1), M2)*np.sqrt((np.abs(M2 - mu0**2))/(M2-M1))/math.fabs(a))[case1]
 
     mu_initial_integral[np.invert(case1)] = mu_complete_integral[np.invert(case1)]
 
@@ -206,7 +206,7 @@ def KerrDeflection(a, theta, E, bx, by):
     A = integral_remainder > mu_complete_integral/2
     pi_final[A] = pi_complete[A] - pi_final[A]
     
-    mu_phi_integral = ((pi_init + pi_final + N*pi_complete)*L/a - a*E*r_integral)/np.sqrt(C1)
+    mu_phi_integral = ((pi_init + pi_final + N*pi_complete)*L/math.fabs(a) - a*E*r_integral)/np.sqrt(C1)
     
     r_phi_integral = PhiTerribleIntegral(r1, r2, r3, r4, a, E, L)
 
@@ -244,8 +244,8 @@ def KerrTrajectory(a, theta, E, bx, by, N):
     r_coeffs = np.array([C1, 2, a**2*C1 - L**2 - Q, 2*((-(a*E) + L)**2 + Q), -a**2*Q])    
     r1, r2, r3, r4 = r_roots = np.sort(np.roots(r_coeffs))
 
-#    if np.sum(r_roots.imag) > 0.0 or np.max(r_roots.real) < 1+C2:
-#        raise Exception( "Capture orbits not implemented.")
+    if np.sum(r_roots.imag) > 0.0 or np.max(r_roots.real) < 1+C2:
+        raise Exception( "Capture orbits not implemented.")
 
     discriminant = np.sqrt((bx**2 + by**2)**2 + 2*a**2*(bx - by)*(bx + by)*(-1 + mu0**2) + a**4*(-1 + mu0**2)**2)
     A = -a**2
@@ -253,29 +253,22 @@ def KerrTrajectory(a, theta, E, bx, by, N):
     C = by**2 + (bx**2 - a**2)*mu0**2
     q = -0.5*(B + np.sign(B)*np.sqrt(B**2 - 4*A*C))
     M1, M2 = np.sort((q/A, C/q),axis = 0)
-#    aSqrM2 = (-bx**2 - by**2 + discriminant + a**2*(1+mu0**2))/2
-#    aSqrM1 = (-bx**2 - by**2 - discriminant + a**2*(1+mu0**2))/2
+    aSqrM2 = (-bx**2 - by**2 + discriminant + a**2*(1+mu0**2))/2
+    aSqrM1 = (-bx**2 - by**2 - discriminant + a**2*(1+mu0**2))/2
     mu_max = np.sqrt(M2)
     mu_min = -np.sqrt(M2)
-    kSqr = M2/(M2 - M1)
-    n = M2/(1-M2)    
+    kSqr = aSqrM2/(aSqrM2 - aSqrM1)
+    n = aSqrM2/(a**2-aSqrM2)    
 
     #r-coordinates to calculate
-#    r = (r4 + np.logspace(3, -3, N/2))
-#    r = np.concatenate((r,r[::-1]))
-#    print r
     r_full = 2*InvSqrtQuartic(r1, r2, r3, r4, r4)
     r_integral = np.linspace(0,r_full,N)
-
+    
     f = lambda u, n: InvSqrtQuartic(r1, r2, r3, r4, 1/u) - r_integral[n]
     r = np.empty(N)
     r[0] = np.inf
     r[1:N/2] = 1/np.array([optimize.brentq(f, 1e-16, 1/r4, args = (m,)) for m in xrange(1,N/2)])
     r[N/2:] = r[:N/2][::-1]
-
-#    r_integral = np.empty(N)
-#    r_integral[:N/2] = InvSqrtQuartic(ones[:N/2]*r1, ones[:N/2]*r2, ones[:N/2]*r3, ones[:N/2]*r4, r[:N/2])
-#    r_integral[N/2:] = r_full - r_integral[:N/2][::-1]
     
     mu_complete_integral = 2*CarlsonR.BoostRF(0.0, (bx**2+by**2+discriminant - a**2*(1+mu0**2))/2.0, discriminant)
 
@@ -293,12 +286,12 @@ def KerrTrajectory(a, theta, E, bx, by, N):
 
     integral_remainder = np.abs(r_integral - nTurns*mu_complete_integral - mu_initial_integral)
     
-    alpha = s_mu*(-1)**nTurns
+    alpha = -np.sign(mu0)*s_mu*(-1)**nTurns
 
     J = np.sqrt(M2-M1)*integral_remainder*a
 
     mu_final = mu_max*CarlsonR.JacobiCN(J, ones*np.sqrt(kSqr))*alpha
-    
+
 # Do mu-integrals for phi deflection
     xSqr_init = np.abs(1 - mu0**2/M2)
     xSqr_final = np.abs(1 - mu_final**2/M2)
@@ -307,7 +300,7 @@ def KerrTrajectory(a, theta, E, bx, by, N):
 
     pi_complete = P*2*CarlsonR.LegendrePiComplete(-n, kSqr)
     pi_init = P*CarlsonR.LegendrePi(-n, xSqr_init, kSqr)
-    pi_final = P*CarlsonR.LegendrePi(-n*ones, xSqr_final, ones*kSqr)
+    pi_final = P*CarlsonR.LegendrePi(-n, xSqr_final, kSqr)
         
     if mu0*s_mu < 0:
         pi_init = pi_complete - pi_init
@@ -336,3 +329,18 @@ def KerrTrajectory(a, theta, E, bx, by, N):
     phi = mu_phi_integral + r_phi_integral
 
     return r, phi, np.arccos(mu_final)
+
+def KerrDeflectionC(a, theta, E, bx, by):
+    phi_result = np.empty(bx.shape)
+    theta_result = np.empty(bx.shape)
+
+    #Schwarzschild case
+    if a==0.0:
+        sch_def = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))
+        phi_result, theta_result = TiltCoords(sch_def, theta, bx, by)
+        return phi_result%(2*pi), theta_result%(pi)
+
+    #C subroutine
+    weave.inline(open("KerrDeflection.cpp").read(), ['a','E','theta','bx','by','phi_result','theta_result'],headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>"])
+
+    return phi_result, theta_result
