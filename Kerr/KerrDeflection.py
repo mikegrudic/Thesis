@@ -14,19 +14,19 @@ def CubicRoots(e, b):
     r2 = np.copy(r3)
     code = """                                                                                               
     int i;                                                                                                   
-    double B, C, Q, R, Q3, theta, SQ;                                                                        
-    double A = 2.0/(e + 1.0)/(e - 1.0);                                                                      
+    double B, C, Q, R, Q3, theta, SQ;
+    double A = 2.0/(e + 1.0)/(e - 1.0);
     double TAU = 2*3.141592653589793116;                                                                     
-    for (i = 0; i < Nb[0]; ++i){                                                                             
-        B = -b[i]*b[i];                                                                                      
-        C = -2*B;                                                                                            
-        Q = (A*A - 3*B)/9;                                                                                   
-        R = (2*pow(A, 3) - 9*A*B + 27*C)/54.0;                                                               
-        Q3 = pow(Q, 3);                                                                                      
-        theta = acos(R/sqrt(Q3));                                                                            
-        SQ = sqrt(Q);                                                                                        
-        r1[i] = -2*SQ*cos(theta/3) - A/3;                                                                    
-        r3[i] = -2*SQ*cos((theta + TAU)/3) - A/3;                                                            
+    for (i = 0; i < Nb[0]; ++i){    
+        B = -b[i]*b[i];          
+        C = -2*B; 
+        Q = (A*A - 3*B)/9;
+        R = (2*pow(A, 3) - 9*A*B + 27*C)/54.0;
+        Q3 = pow(Q, 3);
+        theta = acos(R/sqrt(Q3));      
+        SQ = sqrt(Q);
+        r1[i] = -2*SQ*cos(theta/3) - A/3;
+        r3[i] = -2*SQ*cos((theta + TAU)/3) - A/3;                                 
         r2[i] = -2*SQ*cos((theta - TAU)/3) - A/3;                                                            
     }                                                                                                        
     """
@@ -201,7 +201,7 @@ def KerrDeflection(a, theta, E, bx, by):
     if mu0>0:
         pi_init[s_mu==-1] = pi_complete[s_mu==-1] - pi_init[s_mu==-1]
     else:
-        pi_init[s_mu==1] = pi_complete[s_mu==1] - pi_init[s_mu==1]        
+        pi_init[s_mu==1] = pi_complete[s_mu==1] - pi_init[s_mu==1]      
 
     A = integral_remainder > mu_complete_integral/2
     pi_final[A] = pi_complete[A] - pi_final[A]
@@ -209,13 +209,15 @@ def KerrDeflection(a, theta, E, bx, by):
     mu_phi_integral = ((pi_init + pi_final + N*pi_complete)*L/math.fabs(a) - a*E*r_integral)/np.sqrt(C1)
     
     r_phi_integral = PhiTerribleIntegral(r1, r2, r3, r4, a, E, L)
-
+    
     phi = mu_phi_integral + r_phi_integral
     
     phi_result[doesnt_fall_in] = phi
     mu_result[doesnt_fall_in] = mu_final
 
-    return phi_result%(2*pi), np.arccos(mu_result)%(pi)
+    return phi_result, np.arccos(mu_result)%(pi)
+
+
 
 def KerrTrajectory(a, theta, E, bx, by, N):
 #    N = 2*N   
@@ -341,6 +343,6 @@ def KerrDeflectionC(a, theta, E, bx, by):
         return phi_result%(2*pi), theta_result%(pi)
 
     #C subroutine
-    weave.inline(open("KerrDeflection.cpp").read(), ['a','E','theta','bx','by','phi_result','theta_result'],headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>"])
+    weave.inline(open("KerrDeflection.cpp").read(), ['a','E','theta','bx','by','phi_result','theta_result'],headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>"])
 
     return phi_result, theta_result
