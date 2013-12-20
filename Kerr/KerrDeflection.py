@@ -343,6 +343,12 @@ def KerrDeflectionC(a, theta, E, bx, by):
         return phi_result%(2*pi), theta_result%(pi)
 
     #C subroutine
-    weave.inline(open("KerrDeflection.cpp").read(), ['a','E','theta','bx','by','phi_result','theta_result'],headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>"])
+#    weave.inline(open("KerrDeflection.cpp").read(), ['a','E','theta','bx','by','phi_result','theta_result'],headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>"], extra_compile_args =['-O3'])
+    weave.inline(open("KerrDeflectionOpenMP.cpp").read(),
+                 ['a','E','theta','bx','by','phi_result','theta_result'],
+                 headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>"],
+                extra_compile_args =['-O3 -fopenmp'],
+                extra_link_args=['-lgomp'],
+                )
 
     return phi_result, theta_result
