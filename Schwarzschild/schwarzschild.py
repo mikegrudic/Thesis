@@ -41,6 +41,8 @@ def Roots2(e, b):
     return r1, r2, r3 
 
 def ComputeDeflections(e, b):
+    if type(b) == type(1.0):
+        b = np.array([b])
     bm = bmin(e)
     result = np.zeros(b.shape)
     fall_in = (b<=bm)
@@ -77,9 +79,11 @@ def newton_deflection(e, b):
     newton_e = 0.5 * (e**2 - 1.0)
     return pi - 2*np.arccos(1/np.sqrt(2*newton_e*L**2 + 1))
 
-def SolveForAngle(e, theta):
-    f = lambda b: deflection(e,b) - theta
-    return optimize.brentq(f, 10*bmin(e))
+def SolveForB(e, theta):
+    bm = bmin(e)
+    bmax = 1000.0
+    f = lambda b: ComputeDeflections(e,b) - np.array([theta])
+    return optimize.brentq(f, bm, bmax)
 
 #p=OptionParser()
 #p.add_option("--E", help="Ratio between the total and rest energy of the particle. Let E=NULL for null geodesics.")
@@ -89,7 +93,7 @@ def SolveForAngle(e, theta):
 #if E != "NULL":
 #    E = float(E)
 
-E = 1+np.logspace(-5, 2, 1000)
+#E = 1+np.logspace(-5, 2, 1000)
 #sigma = np.array([Sigma(e) for e in E])
 
 #print DiffSigma(1.1)

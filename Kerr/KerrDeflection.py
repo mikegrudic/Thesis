@@ -95,6 +95,27 @@ def TiltCoords(deflection, theta, bx, by):
     theta_result = np.arccos(np.cos(deflection)*math.cos(theta)+math.sin(theta)*np.sin(deflection)*np.sin(t1))
     return phi_result, theta_result
 
+def FindRoots(a, theta, E, bx, by):
+    mu0 = math.cos(theta)
+    C1 = E**2 - 1
+    C2 = math.sqrt(1-a**2)
+    L = bx*math.sqrt(C1)*math.sin(theta)
+    Q = (E**2 - 1)*((bx**2 - a**2)*mu0**2 + by**2)
+    ones = np.ones(bx.shape)
+    zeros = np.zeros(bx.shape)
+        
+    r_coeffs = np.array([C1*ones, 2*ones, a**2*C1 - L**2 - Q, 2*((-(a*E) + L)**2 + Q), -a**2*Q])
+
+    r_coeffs = r_coeffs/C1
+    companion = np.swapaxes(np.array(
+        [[zeros, zeros, zeros, -r_coeffs[4]],
+        [ones, zeros, zeros, -r_coeffs[3]],
+        [zeros, ones, zeros, -r_coeffs[2]],
+        [zeros, zeros, ones, -r_coeffs[1]]]),0,2)
+
+    r_roots = np.sort(np.linalg.eigvals(companion),axis=1)
+    return r_roots
+
 def KerrDeflection(a, theta, E, bx, by):
     phi_result = np.empty(bx.shape)
     mu_result = np.empty(bx.shape)
@@ -133,6 +154,7 @@ def KerrDeflection(a, theta, E, bx, by):
         [ones, zeros, zeros, -r_coeffs[3]],
         [zeros, ones, zeros, -r_coeffs[2]],
         [zeros, zeros, ones, -r_coeffs[1]]]),0,2)
+
     r_roots = np.sort(np.linalg.eigvals(companion),axis=1)
 
     #Return NaN deflection for trajectories which go into the hole
@@ -220,6 +242,7 @@ def KerrDeflection(a, theta, E, bx, by):
 
 
 def KerrTrajectory(a, theta, E, bx, by, N):
+    print bx, by
 #    N = 2*N   
     mu0 = math.cos(theta)
     C1 = E**2 - 1
@@ -245,7 +268,7 @@ def KerrTrajectory(a, theta, E, bx, by, N):
 
     r_coeffs = np.array([C1, 2, a**2*C1 - L**2 - Q, 2*((-(a*E) + L)**2 + Q), -a**2*Q])    
     r1, r2, r3, r4 = r_roots = np.sort(np.roots(r_coeffs))
-
+    
     if np.sum(r_roots.imag) > 0.0 or np.max(r_roots.real) < 1+C2:
         raise Exception( "Capture orbits not implemented.")
 
@@ -259,8 +282,8 @@ def KerrTrajectory(a, theta, E, bx, by, N):
     aSqrM1 = (-bx**2 - by**2 - discriminant + a**2*(1+mu0**2))/2
     mu_max = np.sqrt(M2)
     mu_min = -np.sqrt(M2)
-    kSqr = aSqrM2/(aSqrM2 - aSqrM1)
-    n = aSqrM2/(a**2-aSqrM2)    
+    kSqr = M2/(M2 - M1)
+    n = M2/(1-M2)
 
     #r-coordinates to calculate
     r_full = 2*InvSqrtQuartic(r1, r2, r3, r4, r4)
@@ -276,7 +299,7 @@ def KerrTrajectory(a, theta, E, bx, by, N):
 
     mu_initial_integral = CarlsonR.BoostRF(mu0**2, M2*(mu0**2 - M1)/(M2-M1), M2)*np.sqrt((np.abs(M2 - mu0**2))/(M2-M1))/a
 
-    if np.sign(by)*np.sign(mu0) == -1:
+    if by*mu0 < 0:
         mu_initial_integral = mu_complete_integral - mu_initial_integral
 
     case1 = r_integral < mu_initial_integral
@@ -285,10 +308,10 @@ def KerrTrajectory(a, theta, E, bx, by, N):
     nTurns = np.empty(N)
     nTurns[case1] = 0
     nTurns[case2] = np.floor((r_integral[case2] - mu_initial_integral)/mu_complete_integral)
-
+    
     integral_remainder = np.abs(r_integral - nTurns*mu_complete_integral - mu_initial_integral)
     
-    alpha = -np.sign(mu0)*s_mu*(-1)**nTurns
+    alpha = s_mu*(-1)**nTurns
 
     J = np.sqrt(M2-M1)*integral_remainder*a
 
@@ -298,25 +321,21 @@ def KerrTrajectory(a, theta, E, bx, by, N):
     xSqr_init = np.abs(1 - mu0**2/M2)
     xSqr_final = np.abs(1 - mu_final**2/M2)
     P = 1/np.sqrt(M2 - M1)/(1-M2)
-#    print 1-M2
 
     pi_complete = P*2*CarlsonR.LegendrePiComplete(-n, kSqr)
     pi_init = P*CarlsonR.LegendrePi(-n, xSqr_init, kSqr)
-    pi_final = P*CarlsonR.LegendrePi(-n, xSqr_final, kSqr)
-        
+    pi_final = P*CarlsonR.LegendrePi(-n*ones, xSqr_final*ones, kSqr*ones)
+
     if mu0*s_mu < 0:
         pi_init = pi_complete - pi_init
-
+    
     A = integral_remainder > mu_complete_integral/2
-    pi_final[case2*A] = pi_complete - pi_final[A]
-
+    pi_final[A] = pi_complete - pi_final[A]
+    
     mu_phi_integral = np.empty(N)
     mu_phi_integral[case1] = np.abs(pi_init - pi_final[case1])*L/a
     mu_phi_integral[case2] = np.abs(pi_init + pi_final[case2] + nTurns[case2]*pi_complete)*L/a
     mu_phi_integral = (mu_phi_integral - a*E*r_integral)/math.sqrt(C1)
-
-#    print mu_phi_integral
-#    mu_phi_integral = (np.abs(pi_init + pi_final + N*pi_complete)*L/a - a*E*r_integral)/np.sqrt(C1)
 
     r_phi_int_full = PhiTerribleIntegral(r1, r2, r3, r4, a, E, L)
 
@@ -347,8 +366,27 @@ def KerrDeflectionC(a, theta, E, bx, by):
     weave.inline(open("KerrDeflectionOpenMP.cpp").read(),
                  ['a','E','theta','bx','by','phi_result','theta_result'],
                  headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>"],
-                extra_compile_args =['-O3 -fopenmp'],
+                extra_compile_args =['-O3 -fopenmp -mtune=native -march=native'],
                 extra_link_args=['-lgomp'],
                 )
 
     return phi_result, theta_result
+
+def MonteCarloCrossSection(a, theta, E, ntheta, nphi, bmax):
+#    bmax = float(100.0)
+
+    bins = np.zeros((ntheta, nphi), dtype=np.int64)
+        
+    randcode = '''
+    inline double fRand(double fMin, double fMax){
+          double f = (double)rand() / RAND_MAX;
+            return fMin + f * (fMax - fMin);
+            };
+   '''
+    captures = weave.inline(open("MonteCarloCrossSection.cpp").read(),
+                        ['bmax', 'a', 'theta', 'E', 'bins'],
+                        headers=["<random>", "<omp.h>","<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>"],
+                        extra_compile_args=['-std=c++11 -O3 -fopenmp -mtune=native -march=native'],
+                        support_code = randcode,
+                        extra_link_args=['-lgomp'])
+    return captures, bins

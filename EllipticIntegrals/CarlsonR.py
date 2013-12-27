@@ -160,9 +160,19 @@ def JacobiSN(x, k):
     return np.sqrt(1-cn)
     
 def LegendrePi(n, xSqr, kSqr):
+    if type(n) != np.ndarray:
+        n = np.array([n])
+    if type(kSqr) != np.ndarray:
+        kSqr = np.array([kSqr])
+    if type(xSqr) != np.ndarray:
+        xSqr = np.array([xSqr])
     return np.sqrt(xSqr)*BoostRF(1-xSqr, 1-kSqr*xSqr, np.ones(kSqr.shape)) + n*xSqr**(3.0/2)*BoostRJ(1-xSqr, 1-kSqr*xSqr, np.ones(xSqr.shape),1-n*xSqr)/3.0
 
 def LegendrePiComplete(n, kSqr):
+    if type(n) != np.ndarray:
+        n = np.array([n])
+    if type(kSqr) != np.ndarray:
+        kSqr = np.array([kSqr])
     return BoostRF(np.zeros(kSqr.shape), 1-kSqr, np.ones(kSqr.shape)) + n*BoostRJ(np.zeros(kSqr.shape), 1-kSqr, np.ones(kSqr.shape),1-n)/3.0
 
 #def InvBiquadratic(a1, a2, b1, b2, x, y):
