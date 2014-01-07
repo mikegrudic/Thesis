@@ -389,7 +389,7 @@ def KerrDeflectionC(a, theta, E, bx, by):
     #C subroutine
     weave.inline(code,
                  ['a','E','theta','bx','by','phi_result','theta_result'],
-                 headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>", "</usr/include/KerrDeflection.cpp>"],
+                 headers=["<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>", "</usr/include/KerrDeflection.cpp>"],
                 extra_compile_args =['-O3 -fopenmp -mtune=native -march=native'],
                 extra_link_args=['-lgomp'],
                 )
