@@ -6,6 +6,18 @@ from CarlsonR import *
 
 pi = np.pi
 
+def SphericalToCartesian(coords, theta0):
+    theta, phi = coords[0], coords[1]
+    x, y, z = np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)
+    x, z = np.cos(np.pi-theta0)*x + np.sin(np.pi-theta0)*z, -np.sin(np.pi-theta0)*x + np.cos(np.pi-theta0)*z
+    return x, y, z
+
+def TiltCoords(coords, theta0):
+    theta, phi = coords[0], coords[1]
+    x, y, z = np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)
+    x, z = np.cos(np.pi-theta0)*x + np.sin(np.pi-theta0)*z, -np.sin(np.pi-theta0)*x + np.cos(np.pi-theta0)*z
+    return np.arccos(z), np.arctan(y, x)
+
 def CubicRoots(e, b):
     if type(b) != np.ndarray:
         b = np.array([b])
@@ -87,7 +99,7 @@ def EquatorialDeflection(a, E, b, roots):
     phi_result = 2*(part1 + part3)
     return phi_result%(2*pi)
 
-def TiltCoords(deflection, theta, bx, by):
+def SchwTiltCoords(deflection, theta, bx, by):
     t1 = np.arctan2(by,bx)
     y = np.cos(t1)*np.sin(deflection)
     x = np.cos(deflection)*math.sin(theta) - np.sin(deflection)*math.cos(theta)*np.sin(t1)
@@ -123,7 +135,7 @@ def KerrDeflection(a, theta, E, bx, by):
     #Schwarzschild case
     if a==0.0:
         sch_def = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))
-        phi_result, theta_result = TiltCoords(sch_def, theta, bx, by)
+        phi_result, theta_result = SchwTiltCoords(sch_def, theta, bx, by)
         return phi_result%(2*pi), theta_result%(pi)
 
     mu0 = math.cos(theta)
@@ -187,7 +199,7 @@ def KerrDeflection(a, theta, E, bx, by):
     kSqr = M2/(M2 - M1)
     n = M2/(1-M2)
 
-#do integrals
+    #do integrals
     r_integral = 2*InvSqrtQuartic(r1, r2, r3, r4, r4)
 
     mu_complete_integral = 2*CarlsonR.BoostRF(zeros, (bx**2+by**2+discriminant - a**2*(1+mu0**2))/2.0, discriminant)
@@ -210,7 +222,7 @@ def KerrDeflection(a, theta, E, bx, by):
     J = np.sqrt(M2-M1)*integral_remainder*a
     mu_final = mu_max*CarlsonR.JacobiCN(J, np.sqrt(kSqr))*alpha
 
-# Do mu-integrals for phi deflection
+    # Do mu-integrals for phi deflection
     xSqr_init = 1 - mu0**2/M2
     xSqr_final = 1 - mu_final**2/M2
 
@@ -352,25 +364,39 @@ def KerrTrajectory(a, theta, E, bx, by, N):
     return r, phi, np.arccos(mu_final)
 
 def KerrDeflectionC(a, theta, E, bx, by):
+#    print type(bx), type(by)
+    if type(bx) != np.ndarray:
+        bx = np.array([bx,])
+    if type(by) != np.ndarray:
+        by = np.array([by,])
     phi_result = np.empty(bx.shape)
     theta_result = np.empty(bx.shape)
 
     #Schwarzschild case
     if a==0.0:
         sch_def = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))
-        phi_result, theta_result = TiltCoords(sch_def, theta, bx, by)
+        phi_result, theta_result = SchwTiltCoords(sch_def, theta, bx, by)
         return phi_result%(2*pi), theta_result%(pi)
 
+    int nn = Nbx[0];
+
+    code = """
+    #pragma omp parallel for
+    for (int i = 0; i < nn; i++)
+    {
+        KerrDeflection(a, E, theta, bx[i], by[i], theta_result[i], phi_result[i]);
+    }
+    """
+
     #C subroutine
-#    weave.inline(open("KerrDeflection.cpp").read(), ['a','E','theta','bx','by','phi_result','theta_result'],headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>"], extra_compile_args =['-O3'])
-    weave.inline(open("KerrDeflectionOpenMP.cpp").read(),
+    weave.inline(code,
                  ['a','E','theta','bx','by','phi_result','theta_result'],
-                 headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>"],
+                 headers=["<rpoly.cpp>","<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>", "</usr/include/KerrDeflection.cpp>"],
                 extra_compile_args =['-O3 -fopenmp -mtune=native -march=native'],
                 extra_link_args=['-lgomp'],
                 )
 
-    return phi_result, theta_result
+    return theta_result, phi_result
 
 def MonteCarloCrossSection(a, theta, E, ntheta, nphi, bmax):
 #    bmax = float(100.0)
