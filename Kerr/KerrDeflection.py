@@ -379,8 +379,10 @@ def KerrDeflectionC(a, theta, E, bx, by):
         return phi_result%(2*pi), theta_result%(pi)
 
     code = """
+    int nn = Nbx[0];
+    int i;
     #pragma omp parallel for
-    for (int i = 0; i < Nbx[0]; i++)
+    for (i = 0; i < nn; i++)
     {
         KerrDeflection(a, E, theta, bx[i], by[i], theta_result[i], phi_result[i]);
     }
@@ -389,7 +391,7 @@ def KerrDeflectionC(a, theta, E, bx, by):
     #C subroutine
     weave.inline(code,
                  ['a','E','theta','bx','by','phi_result','theta_result'],
-                 headers=["<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>", "</usr/include/KerrDeflection.cpp>"],
+                 headers=["<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>", "</usr/include/KerrDeflection.cpp>","<omp.h>"],
                 extra_compile_args =['-O3 -fopenmp -mtune=native -march=native'],
                 extra_link_args=['-lgomp'],
                 )
