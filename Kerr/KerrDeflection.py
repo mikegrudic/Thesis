@@ -378,8 +378,6 @@ def KerrDeflectionC(a, theta, E, bx, by):
         phi_result, theta_result = SchwTiltCoords(sch_def, theta, bx, by)
         return phi_result%(2*pi), theta_result%(pi)
 
-    int nn = Nbx[0];
-
     code = """
     #pragma omp parallel for
     for (int i = 0; i < nn; i++)
