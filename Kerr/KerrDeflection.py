@@ -6,6 +6,27 @@ from CarlsonR import *
 
 pi = np.pi
 
+def rLimits(a, E, theta0):
+    scale_factor = KerrDeflection.bmin(E)/3/np.sqrt(3)
+    a1= optimize.newton(f, 100, args=(E, a, theta0), maxiter=1000,tol=1e-25)
+    try:
+        a2 = optimize.bisect(f, 1,a1-1e-10*scale_factor, args=(E, a, theta0), maxiter=1000,xtol=1e-25)
+    except:
+        a2 = optimize.bisect(f, 1,a1+1e-10*scale_factor, args=(E, a, theta0), maxiter=1000,xtol=1e-25)
+    a2 = optimize.newton(f, a2, args=(E, a, theta0),tol=1e-25)
+    return a1, a2
+
+def CaptureCrossSection(a, E, theta0):
+    rp, rm = rLimits(a, E, theta0)
+    eta = np.linspace(0, np.pi, 1000)
+    r = 0.5*(rp*(1-np.cos(eta)) + rm*(1+np.cos(eta)))
+    by = np.sqrt(f(r, E, a, theta0).real)/(r-1)*np.sign(eta)
+    bx = g(r, E, a, theta0)
+    notnan = np.invert(np.isnan(bx))*np.invert(np.isnan(by))
+    bx, by, r = bx[notnan], by[notnan], r[notnan]
+    #dbx_dr = np.gradient(bx)/np.gradient(r)
+    return 2*np.abs(integrate.simps(by, x=bx))
+
 def SphericalToCartesian(coords, theta0):
     theta, phi = coords[0], coords[1]
     x, y, z = np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)
