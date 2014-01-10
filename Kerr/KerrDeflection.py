@@ -6,17 +6,41 @@ from CarlsonR import *
 
 pi = np.pi
 
+def f(r, e, a, t):
+    return (r**2*(2*e*(-2 + r)*r*np.sqrt(r + (-1 + e**2)*r**2) + a**2*(1 - r + 2*e**2*r + 2*e*np.sqrt(r + (-1 + e**2)*r**2))) + 
+         a**4*(-1 + e**2)*(-1 + r)**2*np.cos(t)**2 - 2*a**4*e*np.sqrt(r + (-1 + e**2)*r**2)/np.tan(t)**2 + 4*a**2*e*r*np.sqrt(r + (-1 + e**2)*r**2)/np.tan(t)**2 - 4*e*r**3*np.sqrt(r + (-1 + e**2)*r**2)/np.tan(t)**2 + 2*e*r**4*np.sqrt(r + (-1 + e**2)*r**2)/np.tan(t)**2 - 
+         a**2*(a**2*(e**2 + r + (-1 + e**2)*r**2) + 2*r**2*(-((-2 + r)*(-1 + r)) + e**2*(-1 + (-2 + r)*r)))/np.tan(t)**2 + 
+         r**3*(-4 + r*(8 + (-5 + r)*r - e**2*(5 + (-4 + r)*r)))/np.sin(t)**2)/(a**2*(-1 + e**2))
+
+def g(r, e, a, t):
+    return ((a*e*(-a**2 + r**2) - a*(a**2 + (-2 + r)*r)*np.sqrt(r + (-1 + e**2)*r**2))/np.sin(t))/(a**2*np.sqrt(-1 + e**2)*(-1 + r))
+
 def rLimits(a, E, theta0):
-    scale_factor = KerrDeflection.bmin(E)/3/np.sqrt(3)
-    a1= optimize.newton(f, 100, args=(E, a, theta0), maxiter=1000,tol=1e-25)
-    try:
-        a2 = optimize.bisect(f, 1,a1-1e-10*scale_factor, args=(E, a, theta0), maxiter=1000,xtol=1e-25)
-    except:
-        a2 = optimize.bisect(f, 1,a1+1e-10*scale_factor, args=(E, a, theta0), maxiter=1000,xtol=1e-25)
-    a2 = optimize.newton(f, a2, args=(E, a, theta0),tol=1e-25)
+    h = lambda r: (2*a**2*r**2*(-2 - E**2*(-1 + r) + r) - a**4*(-r + E**2*(1 + r)) + r**3*(4 + r*(-4 - E**2*(-3 + r) + r)))/((-1 + r)*(a**2 + (-2 + r)*r))
+    r_mid = optimize.newton(h, 5)
+    if theta0 == 0:
+        return r_mid
+    
+    a1, a2 = optimize.brentq(f,r_mid, 6, args=(E, a, theta0)), optimize.bisect(f, 1, r_mid, args=(E, a, theta0))
+#    scale_factor = bmin(E)/3/np.sqrt(3)
+    
+#    a1= optimize.newton(f, 10, args=(E, a, theta0), maxiter=1000,tol=1e-25)
+#    try:
+#        a2 = optimize.bisect(f, 1,a1-1e-10*scale_factor, args=(E, a, theta0), maxiter=1000,xtol=1e-25)
+#    except:
+#        a2 = optimize.bisect(f, 1,a1+1e-10*scale_factor, args=(E, a, theta0), maxiter=1000,xtol=1e-25)
+#    try:
+#        a2 = optimize.newton(f, a2, args=(E, a, theta0), maxiter=1000,tol=1e-25)
+#    except:
+#        pass
     return a1, a2
 
 def CaptureCrossSection(a, E, theta0):
+    if a==0:
+        return np.pi*bmin(E)**2
+    if theta0==0:
+        r = rLimits(a, E, 0.0)
+        return ((a**2 + r**2)*(a**2*(-1 + E**2) + r*(2 + (-1 + E**2)*r)))/((-1 + E**2)*(a**2 + (-2 + r)*r)) * np.pi
     rp, rm = rLimits(a, E, theta0)
     eta = np.linspace(0, np.pi, 1000)
     r = 0.5*(rp*(1-np.cos(eta)) + rm*(1+np.cos(eta)))
@@ -26,6 +50,23 @@ def CaptureCrossSection(a, E, theta0):
     bx, by, r = bx[notnan], by[notnan], r[notnan]
     #dbx_dr = np.gradient(bx)/np.gradient(r)
     return 2*np.abs(integrate.simps(by, x=bx))
+
+def EtaBxBy(a, E, theta0, N):
+    eta = np.linspace(-np.pi, np.pi, N)
+    if a==0:
+        bm = bmin(E)
+        return bm*np.cos(eta), bm*np.sin(eta)
+    if theta0 == 0:
+        r = rLimits(a, E, 0.0)
+        bm = np.sqrt(((a**2 + r**2)*(a**2*(-1 + E**2) + r*(2 + (-1 + E**2)*r)))/((-1 + E**2)*(a**2 + (-2 + r)*r)))
+        return bm*np.cos(eta), bm*np.sin(eta)
+
+    rp, rm = rLimits(a, E, theta0)
+    r = 0.5*(rp*(1-np.cos(eta)) + rm*(1+np.cos(eta)))
+    by = np.sqrt(f(r, E, a, theta0).real)/(r-1)*np.sign(eta)
+    bx = g(r, E, a, theta0)
+    notnan = np.invert(np.isnan(bx))*np.invert(np.isnan(by))
+    return bx[notnan], by[notnan]    
 
 def SphericalToCartesian(coords, theta0):
     theta, phi = coords[0], coords[1]
