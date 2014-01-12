@@ -43,6 +43,6 @@ xErg = rErg*np.cos(u)*np.sin(v)
 yErg = rErg*np.sin(u)*np.sin(v)
 zErg = rErg*np.cos(v)
 ax.plot_surface(xs, ys, zs,  rstride=4, cstride=4, color='black',linewidth=0, alpha=1.0)
-ax.plot_surface(xErg, yErg, zErg,  rstride=4, cstride=4, color='r',alpha=0.2,linewidth=0)
+#ax.plot_surface(xErg, yErg, zErg,  rstride=4, cstride=4, color='r',alpha=0.2,linewidth=0)
 
-plt.show()
+plt.savefig("trajectory.png", bbox_inches='tight')

@@ -22,17 +22,6 @@ def rLimits(a, E, theta0):
         return r_mid
     
     a1, a2 = optimize.brentq(f,r_mid, 6, args=(E, a, theta0)), optimize.bisect(f, 1, r_mid, args=(E, a, theta0))
-#    scale_factor = bmin(E)/3/np.sqrt(3)
-    
-#    a1= optimize.newton(f, 10, args=(E, a, theta0), maxiter=1000,tol=1e-25)
-#    try:
-#        a2 = optimize.bisect(f, 1,a1-1e-10*scale_factor, args=(E, a, theta0), maxiter=1000,xtol=1e-25)
-#    except:
-#        a2 = optimize.bisect(f, 1,a1+1e-10*scale_factor, args=(E, a, theta0), maxiter=1000,xtol=1e-25)
-#    try:
-#        a2 = optimize.newton(f, a2, args=(E, a, theta0), maxiter=1000,tol=1e-25)
-#    except:
-#        pass
     return a1, a2
 
 def CaptureCrossSection(a, E, theta0):
