@@ -233,6 +233,7 @@ def KerrDeflection(a, theta, E, bx, by):
     
     #Equatorial case is easy
     if mu0-math.cos(pi/2) == 0.0 and np.all(by==0.0):
+        print "Equatorial!"
         phi_result[doesnt_fall_in] = EquatorialDeflection(a, E, bx, (r1,r2,r3,r4))
         return phi_result, ones*pi/2
     
@@ -300,7 +301,7 @@ def KerrDeflection(a, theta, E, bx, by):
     phi_result[doesnt_fall_in] = phi
     mu_result[doesnt_fall_in] = mu_final
 
-    return phi_result, np.arccos(mu_result)%(pi)
+    return np.arccos(mu_result)%(pi), phi_result
 
 
 
@@ -432,6 +433,7 @@ def KerrDeflectionC(a, theta, E, bx, by):
     code = """
     int nn = Nbx[0];
     int i;
+    double derp, herp, merp,lerp;
     #pragma omp parallel for
     for (i = 0; i < nn; i++)
     {

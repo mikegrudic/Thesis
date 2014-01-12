@@ -62,11 +62,9 @@ inline void KerrDeflection(double a, double E, double theta, double bx, double b
     U14sqr = U12sqr - (r3-r1)*(r4-r2);
   //
   double r_integral = 4*boost::math::ellint_rf(U12sqr, U13sqr, U14sqr);
-
   double mu_complete_integral = 2*boost::math::ellint_rf(0.0, (disc - B)/2.0, disc);
-  
   double mu_initial_integral;
-  if(fabs(M2 - mu0Sqr) > 1e-15){
+  if(fabs(M2 - mu0Sqr)/M2 > 1e-15){
     mu_initial_integral = boost::math::ellint_rf(mu0Sqr, M2*(mu0Sqr - M1)/(M2-M1), M2)*sqrt(fabs((M2-mu0Sqr)/(M2-M1)))/fabs(a);
   } else {
     mu_initial_integral = mu_complete_integral;
@@ -77,7 +75,7 @@ inline void KerrDeflection(double a, double E, double theta, double bx, double b
   int N = int((r_integral - mu_initial_integral)/mu_complete_integral);
   
   double integral_remainder = r_integral - N*mu_complete_integral - mu_initial_integral;
-  
+
   double alpha = s_mu*pow(-1.0, N);
   
   double cn, dn;
