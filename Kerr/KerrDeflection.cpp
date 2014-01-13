@@ -63,18 +63,23 @@ inline void KerrDeflection(double a, double E, double theta, double bx, double b
   //
   double r_integral = 4*boost::math::ellint_rf(U12sqr, U13sqr, U14sqr);
   double mu_complete_integral = 2*boost::math::ellint_rf(0.0, (disc - B)/2.0, disc);
-  double mu_initial_integral;
+  //  double mu_initial_integral;
+  double mu_initial_integral2;
+
   if(fabs(M2 - mu0Sqr)/M2 > 1e-15){
-    mu_initial_integral = boost::math::ellint_rf(mu0Sqr, M2*(mu0Sqr - M1)/(M2-M1), M2)*sqrt(fabs((M2-mu0Sqr)/(M2-M1)))/fabs(a);
+    //    mu_initial_integral = boost::math::ellint_rf(mu0Sqr, M2*(mu0Sqr - M1)/(M2-M1), M2)*sqrt(fabs((M2-mu0Sqr)/(M2-M1)))/fabs(a);
+    mu_initial_integral2 = mu_complete_integral/2 - mu0*boost::math::ellint_rf(M1*(mu0Sqr - M2), M2*(mu0Sqr - M1), -M2*M1)/fabs(a);
   } else {
-    mu_initial_integral = mu_complete_integral;
+    //    mu_initial_integral = mu_complete_integral;
+    mu_initial_integral2 = mu_complete_integral;
   }
 
-  if (mu0*by < 0.0) mu_initial_integral = mu_complete_integral - mu_initial_integral;
+  //  if (mu0*by < 0.0) mu_initial_integral = mu_complete_integral - mu_initial_integral;
+  if (by < 0) mu_initial_integral2 = mu_complete_integral - mu_initial_integral2;
 
-  int N = int((r_integral - mu_initial_integral)/mu_complete_integral);
-  
-  double integral_remainder = r_integral - N*mu_complete_integral - mu_initial_integral;
+  int N = int((r_integral - mu_initial_integral2)/mu_complete_integral);
+
+  double integral_remainder = r_integral - N*mu_complete_integral - mu_initial_integral2;
 
   double alpha = s_mu*pow(-1.0, N);
   
@@ -91,10 +96,12 @@ inline void KerrDeflection(double a, double E, double theta, double bx, double b
     return;
   }
 
-
   double xSqr_init = 1 - mu0Sqr/M2,
     xSqr_final = 1- mu_final*mu_final/M2,
     P = 1/sqrt(M2 - M1)/(1-M2);
+
+  xSqr_init = std::max(0.0, xSqr_init);
+  xSqr_final = std::max(0.0, xSqr_final);
   
   double pi_complete = 2*boost::math::ellint_3(k, -n),
     pi_init = boost::math::ellint_3(k, -n, asin(sqrt(xSqr_init))),

@@ -148,7 +148,7 @@ def EquatorialDeflection(a, E, b, roots):
     part1 = (L - a*E)/math.sqrt(E**2 - 1) * int1
     part3 = a*E/math.sqrt(E**2 - 1) * (int1 + (a**2 -a*L/E + rplus**2)/(rplus - rminus)*int2  - (a**2 -a*L/E + rminus**2)/(rplus - rminus)*int3)
     phi_result = 2*(part1 + part3)
-    return phi_result%(2*pi)
+    return phi_result
 
 def SchwTiltCoords(deflection, theta, bx, by):
     t1 = np.arctan2(by,bx)
@@ -433,7 +433,7 @@ def KerrDeflectionC(a, theta, E, bx, by):
     code = """
     int nn = Nbx[0];
     int i;
-    double derp, herp, merp,lerp;
+
     #pragma omp parallel for
     for (i = 0; i < nn; i++)
     {
@@ -447,6 +447,7 @@ def KerrDeflectionC(a, theta, E, bx, by):
                  headers=["<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>", "</usr/include/KerrDeflection.cpp>","<omp.h>"],
                 extra_compile_args =['-O3 -fopenmp -mtune=native -march=native'],
                 extra_link_args=['-lgomp'],
+                force=1
                 )
 
     return theta_result, phi_result
