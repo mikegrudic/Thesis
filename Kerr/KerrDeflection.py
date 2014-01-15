@@ -433,7 +433,7 @@ def KerrDeflectionC(a, theta, E, bx, by):
     code = """
     int nn = Nbx[0];
     int i;
-
+    int derp;
     #pragma omp parallel for
     for (i = 0; i < nn; i++)
     {
@@ -445,9 +445,9 @@ def KerrDeflectionC(a, theta, E, bx, by):
     weave.inline(code,
                  ['a','E','theta','bx','by','phi_result','theta_result'],
                  headers=["<algorithm>","<cmath>","<boost/math/special_functions/ellint_rf.hpp>","<boost/math/special_functions/jacobi_elliptic.hpp>","<boost/math/special_functions/ellint_3.hpp>","<boost/math/special_functions/ellint_rj.hpp>","<boost/math/special_functions/ellint_rc.hpp>","</usr/include/quintic_C.c>", "</usr/include/KerrDeflection.cpp>","<omp.h>"],
-                extra_compile_args =['-O3 -fopenmp -mtune=native -march=native'],
+                extra_compile_args =['-O3 -fopenmp -mtune=native -march=native -ffast-math'],
                 extra_link_args=['-lgomp'],
-                force=1
+                force=0
                 )
 
     return theta_result, phi_result
