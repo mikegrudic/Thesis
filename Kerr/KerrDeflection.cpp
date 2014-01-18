@@ -11,27 +11,28 @@ inline double TerribleIntegral(double r1, double r2, double r3, double r4, doubl
 }
 
 inline void KerrDeflection(double a, double E, double theta, double bx, double by, double &theta_result, double &phi_result){
-  const double mu0 = cos(theta),
-    C1 = E*E - 1,
+  const double C1 = E*E - 1,
     C2 = sqrt(1-a*a),
-    mu0Sqr = mu0*mu0,
     aSqr = a*a,
     rplus = 1 + C2,
     rminus = 1 - C2;
-  double bxSqr = bx*bx,
+
+  double mu0 = cos(theta);
+  if (mu0 < -1.0) mu0 = -1.0;
+  if (mu0 > 1.0) mu0 = 1.0;
+  const double mu0Sqr = mu0*mu0;
+
+  const double bxSqr = bx*bx,
     bySqr = by*by,
     L = bx*sqrt(C1)*sin(theta),
     Q = C1*((bxSqr - aSqr)*mu0Sqr + bySqr);
 
   double s_mu;
-  if (mu0 > -1.0 && mu0 < 1.0){
+  if (-1.0 < mu0 < 1.0){
     if (by == 0.0) s_mu = -copysign(1.0, mu0);
     else s_mu = copysign(1.0, by);
   } else {
-    phi_result = NAN;
-    theta_result = NAN;
-    return;
-    //    throw("Polar orbits not implemented.");
+    s_mu = -copysign(1.0, mu0);
   }
 
   double rootsr[4], rootsi[4];
