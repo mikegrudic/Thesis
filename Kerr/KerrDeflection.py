@@ -187,7 +187,7 @@ def KerrDeflection(a, theta, E, bx, by):
     if a==0.0:
         sch_def = SchwarzDeflection(E, np.sqrt(bx**2 + by**2))
         phi_result, theta_result = SchwTiltCoords(sch_def, theta, bx, by)
-        return phi_result%(2*pi), theta_result%(pi)
+        return phi_result, theta_result
 
     mu0 = math.cos(theta)
     C1 = E**2 - 1

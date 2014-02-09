@@ -28,7 +28,7 @@ inline void KerrDeflection(double a, double E, double theta, double bx, double b
     Q = C1*((bxSqr - aSqr)*mu0Sqr + bySqr);
 
   double s_mu;
-  if (-1.0 < mu0 < 1.0){
+  if (-1.0 < mu0 && mu0 < 1.0){
     if (by == 0.0) s_mu = -copysign(1.0, mu0);
     else s_mu = copysign(1.0, by);
   } else {
